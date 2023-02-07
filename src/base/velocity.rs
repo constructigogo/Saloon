@@ -1,15 +1,9 @@
 use bevy::prelude::*;
 
-#[derive(Bundle)]
-pub(crate) struct MovableBundle {
-    // You can nest bundles inside of other bundles like this
-    // Allowing you to compose their functionality
-    pub transform : TransformBundle,
-    pub velocity : Velocity,
-}
 
 
-#[derive(Component, Deref, DerefMut)]
+
+#[derive(Component,Default, Deref, DerefMut)]
 pub struct Velocity(pub Vec2);
 
 fn apply_velocity(time: Res<Time>,mut query: Query<(&mut Transform, &Velocity)>) {
@@ -18,6 +12,7 @@ fn apply_velocity(time: Res<Time>,mut query: Query<(&mut Transform, &Velocity)>)
         transform.translation.y += velocity.y * time.delta_seconds();
     }
 }
+
 
 
 pub struct VelocityPlugin;

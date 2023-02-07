@@ -1,4 +1,4 @@
-use bevy::{prelude::*, ecs::component};
+use bevy::{prelude::*, ecs::component, transform::components};
 use crate::base::velocity::*;
 
 #[path = "../base/velocity.rs"] 
@@ -18,15 +18,14 @@ pub fn UndockPilotSystem(mut commands: Commands,
                     },
                     ..default()
                 },
-                movable: Velocity(Vec2{ 
-                    x: 0.0, 
-                    y: 0.0
-                }),
-                move_towards: Destination{
-                    0:Vec2 { 
-                        x: 0.0, 
-                        y: 0.0 
-                    }
+                movable: MovableBundle { 
+                    mass: Mass(1000.0), 
+                    velocity: Velocity::default(), 
+                    thruster: ThrusterEngine { 
+                        thrust: 200000, 
+                        angular: 25.15 
+                    }, 
+                    move_towards: Destination(Vec2::ZERO)
                 },
             }
         ).remove::<FlagUndocking>();
@@ -52,9 +51,20 @@ pub struct ShipBundle {
     // You can nest bundles inside of other bundles like this
     // Allowing you to compose their functionality
     display : SpriteBundle,
-    movable : Velocity,
-    move_towards : Destination,
+    movable : MovableBundle,
 }
+
+
+#[derive(Bundle)]
+pub(crate) struct MovableBundle {
+    // You can nest bundles inside of other bundles like this
+    // Allowing you to compose their functionality
+    pub mass : Mass,
+    pub velocity : Velocity,
+    pub thruster : ThrusterEngine,
+    pub move_towards : Destination,
+}
+
 
 
 #[derive(Bundle)]
@@ -62,10 +72,9 @@ pub struct ShipStatsBundle {
     // You can nest bundles inside of other bundles like this
     // Allowing you to compose their functionality
 
-    healthComp : DamageableBundle
+    healthComp : Health
     
 }
-
 
 #[derive(Bundle)]
 pub struct DamageableBundle {
@@ -74,6 +83,24 @@ pub struct DamageableBundle {
     health : Health,
     
 }
+
+#[derive(Component,Deref, DerefMut)]
+pub struct Mass(f32);
+
+
+#[derive(Component)]
+pub struct ThrusterEngine{
+    thrust : u32,
+    angular : f32,
+}
+
+#[derive(Component)]
+pub struct WarpEngine{
+    range : f64,
+    speed : f64,
+    power : f64,
+}
+
 
 #[derive(Component)]
 pub struct Health{
