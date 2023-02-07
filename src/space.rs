@@ -1,9 +1,10 @@
 use bevy::app::{App, PluginGroupBuilder};
 use bevy::prelude::*;
 
-use self::ship::UndockPilotSystem;
+use self::ship::*;
 
 pub mod ship;
+pub mod pilot;
 
 pub struct SpaceGamePlugins;
 impl PluginGroup for SpaceGamePlugins {
@@ -14,9 +15,4 @@ impl PluginGroup for SpaceGamePlugins {
 }
 
 
-pub struct ShipPlugins;
-impl Plugin for ShipPlugins {
-    fn build(&self, app: &mut App) {
-        app.add_system(UndockPilotSystem);
-    }
-}
+

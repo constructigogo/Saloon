@@ -1,13 +1,10 @@
 use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
-use bevy::prelude::system_adapter::new;
-use bevy::sprite::*;
-use bevy::transform;
 use space::SpaceGamePlugins;
+use space::ship::pilot::*;
 use crate::base::*;
 use crate::base::timer::*;
-use crate::base::velocity::*;
 use crate::space::ship::*;
 
 
@@ -78,7 +75,7 @@ fn setup(
     ));
     */
     commands.spawn((
-            SpawnNewPilot(),
+            spawn_new_pilot(),
             FlagUndocking,
         )
     );

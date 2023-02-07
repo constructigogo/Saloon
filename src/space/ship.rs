@@ -1,10 +1,45 @@
+use bevy::math::Vec3Swizzles;
 use bevy::{prelude::*, ecs::component, transform::components};
 use crate::base::velocity::*;
+use crate::space::pilot::*;
 
 #[path = "../base/velocity.rs"] 
 pub mod velocity;
+
+#[path = "../space/pilot.rs"] 
+pub mod pilot;
+
  
-pub fn UndockPilotSystem(mut commands: Commands,
+pub struct ShipPlugins;
+impl Plugin for ShipPlugins {
+    fn build(&self, app: &mut App) {
+        app
+        .add_system(compute_ship_movement)
+        .add_system(undock_pilot_system);
+    }
+}
+
+///TODO should schedule only a few times per frame
+pub fn compute_ship_movement(
+    time : Res<Time>,
+    mut query: Query<(&mut Velocity ,&Transform, &Destination, &Mass , &ThrusterEngine,)>){
+    for (mut vel,transform, dest, mass, thruster) in &mut query {
+        let dir = (dest.0 - transform.translation.truncate()).try_normalize();
+        match dir {
+            Some(d) => {
+                vel.0 += d * (get_accel(mass, thruster) * time.delta_seconds());
+            },
+            None => {},
+        }
+    }
+}
+
+fn get_accel(m : &Mass, th : &ThrusterEngine) -> f32{
+    return (th.thrust/m.0) as f32;
+}
+
+
+pub fn undock_pilot_system(mut commands: Commands,
     query: Query<(Entity, With<FlagUndocking>)>) {
     
     for (entity,_) in query.iter()  {
@@ -16,10 +51,17 @@ pub fn UndockPilotSystem(mut commands: Commands,
                         custom_size: Some(Vec2::new(16.0, 16.0)),
                         ..default()
                     },
+                    transform : Transform{
+                        translation: Vec3 { 
+                            x: 200.0, 
+                            y: 150.0, 
+                            z: 0.0 },
+                        ..default()
+                    },
                     ..default()
                 },
                 movable: MovableBundle { 
-                    mass: Mass(1000.0), 
+                    mass: Mass(100000), 
                     velocity: Velocity::default(), 
                     thruster: ThrusterEngine { 
                         thrust: 200000, 
@@ -32,17 +74,9 @@ pub fn UndockPilotSystem(mut commands: Commands,
     }
 }
 
-pub fn SpawnNewPilot() -> PilotBundle{
-    return PilotBundle{
-        _pilot : Pilot{
-            level : 1,
-            u_id : 0,
-        },
-        pilot_name: Name("ZEZRRTERT".to_string()),
-        pilot_faction: Faction(0),
-    }
-}
 
+
+///Flag to schedule a ship undock during the next frame
 #[derive(Component)]
 pub struct FlagUndocking;
 
@@ -54,11 +88,9 @@ pub struct ShipBundle {
     movable : MovableBundle,
 }
 
-
+///Anything movable should be made with this bundle
 #[derive(Bundle)]
 pub(crate) struct MovableBundle {
-    // You can nest bundles inside of other bundles like this
-    // Allowing you to compose their functionality
     pub mass : Mass,
     pub velocity : Velocity,
     pub thruster : ThrusterEngine,
@@ -69,28 +101,29 @@ pub(crate) struct MovableBundle {
 
 #[derive(Bundle)]
 pub struct ShipStatsBundle {
-    // You can nest bundles inside of other bundles like this
-    // Allowing you to compose their functionality
-
     healthComp : Health
     
 }
 
 #[derive(Bundle)]
 pub struct DamageableBundle {
-    // You can nest bundles inside of other bundles like this
-    // Allowing you to compose their functionality
+
     health : Health,
     
 }
 
+
+/// Mass in Kg of an entity
 #[derive(Component,Deref, DerefMut)]
-pub struct Mass(f32);
+pub struct Mass(u64);
+
 
 
 #[derive(Component)]
 pub struct ThrusterEngine{
-    thrust : u32,
+    ///Thrust in Newton (N)
+    thrust : u64,
+    ///Angular in degree/sec
     angular : f32,
 }
 
@@ -104,12 +137,12 @@ pub struct WarpEngine{
 
 #[derive(Component)]
 pub struct Health{
-    currentStructure : f32,
-    maxStructure : f32,
-    currentArmor : f32,
-    maxArmor : f32,
-    currentShield : f32,
-    maxShield : f32,
+    current_structure : f32,
+    max_structure : f32,
+    current_armor : f32,
+    max_armor : f32,
+    current_shield : f32,
+    max_shield : f32,
 }
 
 
@@ -118,30 +151,3 @@ pub struct Health{
 #[derive(Component,Deref, DerefMut)]
 pub struct Destination(Vec2);
 
-
-#[derive(Bundle)]
-pub struct PilotBundle {
-    // You can nest bundles inside of other bundles like this
-    // Allowing you to compose their functionality
-    _pilot : Pilot,
-    pilot_name : Name,
-    pilot_faction : Faction
-}
-
-#[derive(Component,Deref, DerefMut)]
-pub struct Name(String);
-
-#[derive(Component,Deref, DerefMut)]
-pub struct Faction(u32);
-
-#[derive(Component)]
-pub struct Pilot{
-    level : u8,
-    u_id : u64,
-}
-
-#[derive(Component,Deref, DerefMut)]
-pub struct PilotLevel(u8);
-
-#[derive(Component,Deref, DerefMut)]
-pub struct PilotUID(u64);
