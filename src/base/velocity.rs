@@ -6,8 +6,10 @@ use bevy::prelude::*;
 #[derive(Component,Default, Deref, DerefMut)]
 pub struct Velocity(pub Vec2);
 
+//TODO implement some real space drag / max speed for ships
 fn apply_velocity(time: Res<Time>,mut query: Query<(&mut Transform, &Velocity)>) {
     for (mut transform, velocity) in &mut query {
+        println!("speed {}",velocity.length());
         transform.translation.x += velocity.x * time.delta_seconds();
         transform.translation.y += velocity.y * time.delta_seconds();
     }

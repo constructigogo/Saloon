@@ -5,6 +5,7 @@ use self::ship::*;
 
 pub mod ship;
 pub mod pilot;
+pub mod galaxy;
 
 pub struct SpaceGamePlugins;
 impl PluginGroup for SpaceGamePlugins {

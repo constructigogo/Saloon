@@ -1,14 +1,14 @@
 use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
-use space::SpaceGamePlugins;
+
 use space::ship::pilot::*;
+use space::SpaceGamePlugins;
+
 use crate::base::*;
 use crate::base::timer::*;
+use crate::DestoType::TEntity;
 use crate::space::ship::*;
-
-
-
 
 pub mod base;
 pub mod space;
@@ -24,29 +24,21 @@ fn main() {
         .add_startup_system(setup)
         //.add_system(frame_update)
         .add_system(follow_mouse)
+        .add_system(test_move)
         .run();
 }
 
 #[derive(Component)]
-struct BrickTag;
-
-#[derive(Bundle)]
-struct BrickBundle {
-    // You can nest bundles inside of other bundles like this
-    // Allowing you to compose their functionality
-    tag : BrickTag,
-    sprite_bundle: SpriteBundle
-}
-
+struct TestTag;
 
 
 fn follow_mouse(mut query: Query<&mut Transform>,
-    mut motion_evr: EventReader<MouseMotion>,
-    mouse_button_input: Res<Input<MouseButton>>){
+                mut motion_evr: EventReader<MouseMotion>,
+                mouse_button_input: Res<Input<MouseButton>>) {
     if mouse_button_input.pressed(MouseButton::Left) {
-        for mut transf in  &mut query {
-            for ev in motion_evr.iter(){
-                transf.translation += Vec3::new(ev.delta.x,-ev.delta.y,0.0);
+        for mut transf in &mut query {
+            for ev in motion_evr.iter() {
+                transf.translation += Vec3::new(ev.delta.x, -ev.delta.y, 0.0);
             }
         }
     }
@@ -74,12 +66,58 @@ fn setup(
 
     ));
     */
-    for _ in 0..2000 {
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::rgb(0.80, 0.25, 0.10),
+                custom_size: Some(Vec2::new(16.0, 16.0)),
+                ..default()
+            },
+            transform: Transform {
+                translation: Vec3 {
+                    x: -600.0,
+                    y: 300.0,
+                    z: 0.0,
+                },
+                ..default()
+            },
+            ..default()
+        },
+        TestTag,
+    ));
+
+    for _ in 0..1 {
         commands.spawn((
             spawn_new_pilot(),
             FlagUndocking,
-            )
+        )
         );
     }
+}
 
+
+fn test_move(
+    mut queryShips : Query<&mut Destination, Without<TestTag>>,
+    queryTargets: Query<&Transform, With<TestTag>>){
+    let mut t : Option<&Transform> = None;
+    let mut min_dist : f32=f32::MAX;
+    for tr in queryTargets.iter() {
+        let dist = tr.translation.length_squared();
+        if dist < min_dist {
+            min_dist = dist;
+            t = Some(tr)
+        }
+    }
+
+    //println!("{:?}",t);
+
+    for mut dest in &mut queryShips {
+        match t {
+            Some(tr) => {
+                dest.0 = TEntity(*tr);
+            }
+            None => {}
+        }
+
+    }
 }
