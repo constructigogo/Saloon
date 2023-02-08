@@ -74,9 +74,12 @@ fn setup(
 
     ));
     */
-    commands.spawn((
+    for _ in 0..2000 {
+        commands.spawn((
             spawn_new_pilot(),
             FlagUndocking,
-        )
-    );
+            )
+        );
+    }
+
 }

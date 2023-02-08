@@ -1,5 +1,6 @@
 use bevy::math::Vec3Swizzles;
 use bevy::{prelude::*, ecs::component, transform::components};
+use rand::prelude::*;
 use crate::base::velocity::*;
 use crate::space::pilot::*;
 
@@ -24,13 +25,21 @@ pub fn compute_ship_movement(
     time : Res<Time>,
     mut query: Query<(&mut Velocity ,&Transform, &Destination, &Mass , &ThrusterEngine,)>){
     for (mut vel,transform, dest, mass, thruster) in &mut query {
-        let dir = (dest.0 - transform.translation.truncate()).try_normalize();
-        match dir {
-            Some(d) => {
-                vel.0 += d * (get_accel(mass, thruster) * time.delta_seconds());
+        let d_type : &DestoType = &dest.0;
+        match d_type {
+            DestoType::DPosition(vec)  => {
+                let dir = (*vec - transform.translation.truncate()).try_normalize();
+                match dir {
+                    Some(d) => {
+                        vel.0 += d * (get_accel(mass, thruster) * time.delta_seconds());
+                    },
+                    None => {},
+                }
             },
-            None => {},
+            DestoType::TEntity(ent) => {},
+            _ => {}
         }
+
     }
 }
 
@@ -41,7 +50,9 @@ fn get_accel(m : &Mass, th : &ThrusterEngine) -> f32{
 
 pub fn undock_pilot_system(mut commands: Commands,
     query: Query<(Entity, With<FlagUndocking>)>) {
-    
+    let mut rng = rand::thread_rng();
+
+
     for (entity,_) in query.iter()  {
         commands.entity(entity).insert(
             ShipBundle {
@@ -53,8 +64,8 @@ pub fn undock_pilot_system(mut commands: Commands,
                     },
                     transform : Transform{
                         translation: Vec3 { 
-                            x: 200.0, 
-                            y: 150.0, 
+                            x: rng.gen_range(-200.0..200.0),
+                            y: rng.gen_range(-150.0..150.0),
                             z: 0.0 },
                         ..default()
                     },
@@ -64,10 +75,10 @@ pub fn undock_pilot_system(mut commands: Commands,
                     mass: Mass(100000), 
                     velocity: Velocity::default(), 
                     thruster: ThrusterEngine { 
-                        thrust: 200000, 
+                        thrust: 500000,
                         angular: 25.15 
                     }, 
-                    move_towards: Destination(Vec2::ZERO)
+                    move_towards: Destination(DestoType::DPosition(Vec2::ZERO))
                 },
             }
         ).remove::<FlagUndocking>();
@@ -145,9 +156,15 @@ pub struct Health{
     max_shield : f32,
 }
 
+#[derive(Default)]
+pub enum DestoType {
+    DPosition(Vec2),
+    TEntity(Entity),
+    #[default]
+    None
+}
 
 
-
-#[derive(Component,Deref, DerefMut)]
-pub struct Destination(Vec2);
+#[derive(Component, Deref, DerefMut)]
+pub struct Destination(DestoType);
 
