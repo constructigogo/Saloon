@@ -131,6 +131,7 @@ pub fn undock_pilot_system(mut commands: Commands,
 
 ///Flag to schedule a ship undock during the next frame
 #[derive(Component)]
+#[component(storage = "SparseSet")]
 pub struct FlagUndocking;
 
 #[derive(Bundle)]

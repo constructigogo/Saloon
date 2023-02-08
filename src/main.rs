@@ -2,6 +2,8 @@ use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 
+use rand::{thread_rng, Rng};
+use space::galaxy::{SystemMap, SolarSystem, GalaxyCoordinate};
 use space::ship::pilot::*;
 use space::SpaceGamePlugins;
 
@@ -17,14 +19,11 @@ pub mod space;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(BaseLogicPlugins)
         .add_plugins(SpaceGamePlugins)
-
         .add_plugin(TimerPlugin)
         .add_startup_system(setup)
         //.add_system(frame_update)
         .add_system(follow_mouse)
-        .add_system(test_move)
         .run();
 }
 
@@ -49,8 +48,43 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut cluster: ResMut<SystemMap>,
 ) {
     commands.spawn(Camera2dBundle::default());
+    let mut rng = thread_rng();
+    for i in 0..3 {
+        let id = commands.spawn((SolarSystem{
+            anomalies: Vec::new(),
+            localTransform: Transform::default(),
+        })).id();
+
+        cluster.0.push(id);
+
+        for s in 0..10 {
+            commands.spawn((
+            SpriteBundle {
+                sprite: Sprite {
+                    color: Color::rgb(0.25, 0.25, 0.75),
+                    custom_size: Some(Vec2::new(24.0, 24.0)),
+                    ..default()
+                },
+                transform: Transform {
+                    translation: Vec3 {
+                        x: rng.gen_range(-200.0..200.0),
+                        y: rng.gen_range(-150.0..150.0),
+                        z: 0.0,
+                    },
+                    ..default()
+                },
+                visibility: Visibility { is_visible: false },
+                ..default()
+            },
+            GalaxyCoordinate(id),
+            ));
+        }
+    }
+
+    
 
     /* 
     // Cube
@@ -66,6 +100,7 @@ fn setup(
 
     ));
     */
+    /* 
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -85,7 +120,7 @@ fn setup(
         },
         TestTag,
     ));
-
+    
     for _ in 0..1 {
         commands.spawn((
             spawn_new_pilot(),
@@ -93,6 +128,7 @@ fn setup(
         )
         );
     }
+    */
 }
 
 
