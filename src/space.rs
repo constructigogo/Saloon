@@ -22,6 +22,7 @@ impl Plugin for GalaxyPlugin {
     fn build(&self, app: &mut App) {
         app
         .insert_resource(SystemMap(Vec::new()))
+        .add_event::<RenderSystemEvent>()
         .add_system(flag_render_solar_system)
         .add_system(generate_view);
     }

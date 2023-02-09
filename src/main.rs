@@ -1,7 +1,10 @@
+use std::default;
+
 use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 
+use bevy_mod_picking::*;
 use rand::{thread_rng, Rng};
 use space::galaxy::{SystemMap, SolarSystem, GalaxyCoordinate};
 use space::ship::pilot::*;
@@ -19,11 +22,12 @@ pub mod space;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPickingPlugins)
         .add_plugins(SpaceGamePlugins)
         .add_plugin(TimerPlugin)
         .add_startup_system(setup)
         //.add_system(frame_update)
-        .add_system(follow_mouse)
+        //.add_system(follow_mouse)
         .run();
 }
 
@@ -50,13 +54,33 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut cluster: ResMut<SystemMap>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((
+        Camera2dBundle::default(),
+        PickingCameraBundle::default()
+    ));
     let mut rng = thread_rng();
     for i in 0..3 {
         let id = commands.spawn((SolarSystem{
             anomalies: Vec::new(),
-            localTransform: Transform::default(),
-        })).id();
+        },
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::rgb(0.95, 0.25, 0.25),
+                custom_size: Some(Vec2::new(64.0, 64.0)),
+                ..default()
+            },
+            transform: Transform {
+                translation: Vec3 {
+                    x: -500.0 + (500.0 * i as f32),
+                    y: 0.0,
+                    z: 0.0,
+                },
+                ..default()
+            },
+            visibility: Visibility { is_visible: true },
+            ..default()
+        },
+    )).id();
 
         cluster.0.push(id);
 
