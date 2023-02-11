@@ -8,7 +8,6 @@ use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickingCameraBundl
 #[derive(Resource,Default)]
 pub struct SystemMap(pub Vec<Entity>);
 
-
 ///Index of the reference system
 #[derive(Component,Deref)]
 pub struct GalaxyCoordinate(pub Entity);
@@ -16,7 +15,24 @@ pub struct GalaxyCoordinate(pub Entity);
 #[derive(Component)]
 pub struct SolarSystem {
     pub anomalies : Vec<Entity>,
+    pub gates : Vec<Entity>
 }
+
+
+
+#[derive(Bundle)]
+pub struct GalaxyGateBundle{
+    pub tag : GalaxyGateTag,
+    pub desto : GateDestination,
+}
+
+#[derive(Component,Deref)]
+pub struct GateDestination(pub Entity);
+
+
+#[derive(Component)]
+pub struct GalaxyGateTag;
+
 
 #[derive(Component)]
 pub struct AnomalyMining;
@@ -44,7 +60,7 @@ pub struct Rendered;
 pub struct RenderFlag;
 
 #[derive(Resource,PartialEq, Eq)]
-pub enum VIEW_STATE {
+pub enum ViewState {
     SYSTEM,
     GALAXY,
     EMPTY,
@@ -58,8 +74,8 @@ pub fn exit_system_view(
     keys: Res<Input<KeyCode>>,
     mut ev: EventWriter<RenderGalaxyEvent>,
     mut ev_hide: EventWriter<HideSystemEvent>,
-    state: Res<VIEW_STATE>){
-    if *state.into_inner() != VIEW_STATE::GALAXY { 
+    state: Res<ViewState>){
+    if *state.into_inner() != ViewState::GALAXY { 
         if keys.just_pressed(KeyCode::Numpad0) {
             ev.send(RenderGalaxyEvent);
             ev_hide.send(HideSystemEvent);
@@ -113,7 +129,7 @@ pub fn flag_render_solar_system(mut commands: Commands,
 
 pub fn hide_system_view(mut commands: Commands,
     mut query : Query<(Entity,& mut Visibility), (With<Rendered>)>,
-    mut state: ResMut<VIEW_STATE>,
+    mut state: ResMut<ViewState>,
     mut ev_hide: EventReader<HideSystemEvent>){
 
     if !ev_hide.is_empty() {
@@ -122,14 +138,14 @@ pub fn hide_system_view(mut commands: Commands,
             vis.is_visible =false;
             commands.entity(entity).remove::<Rendered>();
         }
-        *state=VIEW_STATE::EMPTY;
+        *state=ViewState::EMPTY;
     }
     
 }
 
 pub fn hide_galaxy_view(mut commands: Commands,
     mut query : Query<(Entity,& mut Visibility), (With<SolarSystem>)>,
-    mut state: ResMut<VIEW_STATE>,
+    mut state: ResMut<ViewState>,
     mut ev_hide: EventReader<HideGalaxyEvent>){
 
     if !ev_hide.is_empty() {
@@ -138,16 +154,14 @@ pub fn hide_galaxy_view(mut commands: Commands,
             vis.is_visible =false;
             commands.entity(entity).remove::<Rendered>();
         }
-        *state=VIEW_STATE::EMPTY;
+        *state=ViewState::EMPTY;
     }
     
 }
 
-
-
 pub fn generate_galaxy_view(mut commands: Commands,
     mut queryClicked : Query<(Entity,& mut Visibility), (With<SolarSystem>)>,
-    mut state: ResMut<VIEW_STATE>,
+    mut state: ResMut<ViewState>,
     ev_render: EventReader<RenderGalaxyEvent>){
 
     if !ev_render.is_empty(){
@@ -155,18 +169,18 @@ pub fn generate_galaxy_view(mut commands: Commands,
             vis.is_visible =true;
             commands.entity(entity).insert(Rendered);
         }
-        *state=VIEW_STATE::GALAXY;
+        *state=ViewState::GALAXY;
     }
 }
 
 pub fn generate_system_view(mut commands: Commands,
     mut query: Query<(Entity,& mut Visibility) , Added<RenderFlag>>,
-    mut state: ResMut<VIEW_STATE>){
+    mut state: ResMut<ViewState>){
     for (entity,mut vis) in & mut query {
         vis.is_visible =true;
         commands.entity(entity).insert(Rendered).remove::<RenderFlag>();
     }
-    *state=VIEW_STATE::SYSTEM;
+    *state=ViewState::SYSTEM;
 }
 
 

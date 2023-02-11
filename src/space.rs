@@ -23,7 +23,7 @@ impl Plugin for GalaxyPlugin {
     fn build(&self, app: &mut App) {
         app
         .insert_resource(SystemMap(Vec::new()))
-        .insert_resource(VIEW_STATE::GALAXY)
+        .insert_resource(ViewState::GALAXY)
         .add_event::<HideGalaxyEvent>()
         .add_event::<HideSystemEvent>()
         .add_event::<RenderGalaxyEvent>()

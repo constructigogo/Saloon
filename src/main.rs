@@ -60,15 +60,12 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut cluster: ResMut<SystemMap>,
 ) {
-    commands.spawn((
-        Camera2dBundle::default(),
-        PickingCameraBundle::default()
-    ));
     
     let mut rng = thread_rng();
     for i in 0..3 {
         let id = commands.spawn((SolarSystem{
             anomalies: Vec::new(),
+            gates:Vec::new(),
         },
         UndockLoc,
         MaterialMesh2dBundle {

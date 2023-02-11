@@ -1,11 +1,16 @@
 use bevy::app::{App, PluginGroupBuilder};
 use bevy::prelude::*;
 
+use self::camera::CameraControllerPlugin;
 use self::velocity::VelocityPlugin;
+use self::settings::*;
+
 
 
 pub mod timer;
 pub mod velocity;
+pub mod camera;
+pub mod settings;
 
 
 
@@ -22,6 +27,8 @@ pub struct BaseLogicPlugins;
 impl PluginGroup for BaseLogicPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
+            .add(GameSettingsPlugin)
+            .add(CameraControllerPlugin)
             .add(VelocityPlugin)
     }
 }
