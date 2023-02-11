@@ -5,6 +5,8 @@ use rand::prelude::*;
 use crate::base::velocity::*;
 use crate::space::pilot::*;
 
+use super::galaxy::GalaxyCoordinate;
+
 #[path = "../base/velocity.rs"]
 pub mod velocity;
 
@@ -39,10 +41,19 @@ pub fn compute_ship_forces(
                     thruster,
                     time.delta_seconds()
                 );
+                match u {
+                    None => {}
+                    Some(uv) => {
+                        let drag_coef= 0.5*vel.0.length_squared()*0.225;
+                        let drag_vec:Vec2= -uv*drag_coef;
+                        vel.0 += drag_vec*time.delta_seconds();
+                    }
+                }
                 match res {
                     None => {}
-                    Some(dir) => {vel.0 +=dir}
+                    Some(acc_dt) => {vel.0 +=acc_dt}
                 }
+
             }
             DestoType::TEntity(ent) => {
                 let res = get_delta_velocity(
@@ -57,7 +68,6 @@ pub fn compute_ship_forces(
                     None => {}
                     Some(uv) => {
                         let drag_coef= 0.5*vel.0.length_squared()*0.225;
-                        println!("{}",drag_coef);
                         let drag_vec:Vec2= -uv*drag_coef;
                         vel.0 += drag_vec*time.delta_seconds();
                     }
@@ -86,45 +96,57 @@ fn get_delta_velocity(from : &Vec2, to: &Vec2, m: &Mass, th: &ThrusterEngine,dt 
 }
 
 fn get_accel(m: &Mass, th: &ThrusterEngine) -> f32 {
-    println!("thrust acc {}",(th.thrust / m.0));
     return (th.thrust / m.0) as f32;
 }
 
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+pub struct UndockLoc;
 
-pub fn undock_pilot_system(mut commands: Commands,
-                           query: Query<(Entity, With<FlagUndocking>)>) {
+
+pub fn undock_pilot_system(
+    mut commands: Commands,
+    query: Query<(Entity,&UndockingFrom)>,
+    undocks : Query<&Transform,With<UndockLoc>>){
+
     let mut rng = thread_rng();
-    for (entity, _) in query.iter() {
-        commands.entity(entity).insert(
-            ShipBundle {
-                display: SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgb(0.25, 0.25, 0.75),
-                        custom_size: Some(Vec2::new(16.0, 16.0)),
-                        ..default()
-                    },
-                    transform: Transform {
-                        translation: Vec3 {
-                            x: rng.gen_range(-200.0..200.0),
-                            y: rng.gen_range(-150.0..150.0),
-                            z: 0.0,
+    for (entity,from) in query.iter() {
+        if let Ok(trans) = undocks.get(commands.entity(from.0).id()){
+            commands.entity(entity).insert(
+                ShipBundle {
+                    display: SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::rgb(0.25, 0.25, 0.75),
+                            custom_size: Some(Vec2::new(16.0, 16.0)),
+                            ..default()
                         },
+                        transform: Transform {
+                            translation: trans.translation,
+                            ..default()
+                        },
+                        visibility : Visibility { is_visible: false },
                         ..default()
                     },
-                    ..default()
-                },
-                movable: MovableBundle {
-                    mass: Mass(100000),
-                    velocity: Velocity::default(),
-                    thruster: ThrusterEngine {
-                        max_speed : 10.0,
-                        thrust: 500000,
-                        angular: 25.15,
+                    movable: MovableBundle {
+                        coordinate : GalaxyCoordinate(from.0),
+                        mass: Mass(100000),
+                        velocity: Velocity::default(),
+                        thruster: ThrusterEngine {
+                            max_speed : 10.0,
+                            thrust: 1500000,
+                            angular: 25.15,
+                        },
+                        move_towards: Destination(DestoType::DPosition(Vec2 { 
+                            x: rng.gen_range(-200.0..200.0), 
+                            y: rng.gen_range(-150.0..150.0) 
+                        })),
                     },
-                    move_towards: Destination(DestoType::DPosition(Vec2::ZERO)),
-                },
-            }
-        ).remove::<FlagUndocking>();
+                }
+            ).remove::<UndockingFrom>();
+        }
+        else {
+            println!("empty ? {}",undocks.is_empty());
+        }
     }
 }
 
@@ -132,7 +154,7 @@ pub fn undock_pilot_system(mut commands: Commands,
 ///Flag to schedule a ship undock during the next frame
 #[derive(Component)]
 #[component(storage = "SparseSet")]
-pub struct FlagUndocking;
+pub struct UndockingFrom(pub Entity);
 
 #[derive(Bundle)]
 pub struct ShipBundle {
@@ -145,6 +167,7 @@ pub struct ShipBundle {
 ///Anything movable should be made with this bundle
 #[derive(Bundle)]
 pub(crate) struct MovableBundle {
+    pub coordinate : GalaxyCoordinate,
     pub mass: Mass,
     pub velocity: Velocity,
     pub thruster: ThrusterEngine,
@@ -204,6 +227,7 @@ pub enum DestoType {
     #[default]
     None,
 }
+
 
 
 #[derive(Component, Deref, DerefMut)]

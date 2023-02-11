@@ -4,6 +4,9 @@ use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 
+use bevy_editor_pls::prelude::*;
+
+use bevy::sprite::MaterialMesh2dBundle;
 use bevy_mod_picking::*;
 use rand::{thread_rng, Rng};
 use space::galaxy::{SystemMap, SolarSystem, GalaxyCoordinate};
@@ -22,7 +25,10 @@ pub mod space;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(EditorPlugin)
         .add_plugins(DefaultPickingPlugins)
+        .add_plugin(DebugEventsPickingPlugin)
+        .add_plugins(BaseLogicPlugins)
         .add_plugins(SpaceGamePlugins)
         .add_plugin(TimerPlugin)
         .add_startup_system(setup)
@@ -58,11 +64,30 @@ fn setup(
         Camera2dBundle::default(),
         PickingCameraBundle::default()
     ));
+    
     let mut rng = thread_rng();
     for i in 0..3 {
         let id = commands.spawn((SolarSystem{
             anomalies: Vec::new(),
         },
+        UndockLoc,
+        MaterialMesh2dBundle {
+            mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
+            material: materials.add(ColorMaterial::from(Color::RED)),
+            transform: Transform {
+                translation: Vec3 {
+                    x: -500.0 + (500.0 * i as f32),
+                    y: 0.0,
+                    z: 0.0,
+                },
+                scale : Vec3 { x: 64.0, y: 64.0, z: 1.0 },
+                ..default()
+            },
+            visibility: Visibility { is_visible: true },
+            ..default()
+        },
+        PickableBundle::default(), // <- Makes the mesh pickable.
+        /* 
         SpriteBundle {
             sprite: Sprite {
                 color: Color::rgb(0.95, 0.25, 0.25),
@@ -80,11 +105,14 @@ fn setup(
             visibility: Visibility { is_visible: true },
             ..default()
         },
-    )).id();
+        PickableBundle::default()
+        */
+    )).remove::<Selection>().id();
 
         cluster.0.push(id);
 
-        for s in 0..10 {
+        for _ in 0..10 {
+            /* 
             commands.spawn((
             SpriteBundle {
                 sprite: Sprite {
@@ -104,6 +132,12 @@ fn setup(
                 ..default()
             },
             GalaxyCoordinate(id),
+            ));
+            */
+
+            commands.spawn((
+                spawn_new_pilot(),
+                UndockingFrom(id),
             ));
         }
     }

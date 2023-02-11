@@ -8,6 +8,7 @@ pub fn spawn_new_pilot() -> PilotBundle{
             level : 1,
             u_id : 0,
         },
+        respawn_base : RespawnBase(None),
         pilot_name: EName("ZEZRRTERT".to_string()),
         pilot_faction: Faction(0),
     }
@@ -16,12 +17,14 @@ pub fn spawn_new_pilot() -> PilotBundle{
 
 #[derive(Bundle)]
 pub struct PilotBundle {
-    // You can nest bundles inside of other bundles like this
-    // Allowing you to compose their functionality
     pub _pilot : Pilot,
+    pub respawn_base : RespawnBase,
     pub pilot_name : EName,
     pub pilot_faction : Faction
 }
+
+#[derive(Component,Deref, DerefMut)]
+pub struct RespawnBase(pub Option<Entity>);
 
 #[derive(Component,Deref, DerefMut)]
 pub struct EName(pub String);
