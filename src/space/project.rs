@@ -21,7 +21,9 @@ pub fn project_to_camera(camera_zoom: Res<CameraZoom>,
                     x: ((sPos.0.x / camera_zoom.0) as f32).clamp(
                         -(((cam.physical_target_size().unwrap().x -4)/2) as f32),
                         ((cam.physical_target_size().unwrap().x -4)/2) as f32),
-                    y: (sPos.0.y / camera_zoom.0) as f32,
+                    y: ((sPos.0.y / camera_zoom.0) as f32).clamp(
+                        -(((cam.physical_target_size().unwrap().y -4)/2) as f32),
+                        ((cam.physical_target_size().unwrap().y -4)/2) as f32),,
                     z: 0.0,
                 };
                 trans.translation = calc
