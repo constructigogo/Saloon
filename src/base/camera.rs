@@ -1,4 +1,6 @@
+use std::cmp::max;
 use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::MouseMotion}, prelude::*};
+use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy_mod_picking::PickingCameraBundle;
 
 use super::settings::{GameplaySettings, InputSettings};
@@ -7,9 +9,10 @@ use super::settings::{GameplaySettings, InputSettings};
 pub struct CameraID(pub Entity);
 
 #[derive(Resource)]
-pub struct CameraZoom(f64);
+pub struct CameraZoom(pub f64);
 
 pub struct CameraControllerPlugin;
+
 impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup);
@@ -24,17 +27,19 @@ fn setup(mut commands: Commands) {
     )).id();
 
     commands.insert_resource(CameraID(id));
-    commands.insert_resource(CameraZoom(200.0));
+    commands.insert_resource(CameraZoom(1.0));
 }
 
 
 fn camera_input(time: Res<Time>,
-                mut camera_query: Query<&mut Transform, With<Camera>>,
+                mut camera_zoom: ResMut<CameraZoom>,
+                mut camera_query: Query<(&mut Transform), With<Camera>>,
                 keys: Res<Input<ScanCode>>,
                 camera_id: Res<CameraID>,
                 settings: Res<GameplaySettings>,
                 input_settings: Res<InputSettings>,
                 mut motion_evr: EventReader<MouseMotion>,
+                mut scroll_evr: EventReader<MouseWheel>,
                 buttons: Res<Input<MouseButton>>) {
 
     //get the camera first before checking inputs
@@ -42,6 +47,18 @@ fn camera_input(time: Res<Time>,
     let got = camera_query.get_mut(camera_id.0);
     match got {
         Ok(mut tr) => {
+            for ev in scroll_evr.iter() {
+                match ev.unit {
+                    MouseScrollUnit::Line => {
+                        camera_zoom.0 = f64::max((camera_zoom.0+ev.y as f64),1.0) ;
+                        println!("scale {:?}", camera_zoom.0);
+                    }
+                    MouseScrollUnit::Pixel => {
+                        println!("Scroll (pixel units): vertical: {}, horizontal: {}", ev.y, ev.x);
+                    }
+                }
+            }
+
             let mut dir = Vec3::ZERO;
             //mouse drag
             /*
