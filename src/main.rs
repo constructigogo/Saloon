@@ -2,6 +2,7 @@ use std::default;
 
 use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
+use bevy::math::DVec3;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy_editor_pls::prelude::*;
@@ -15,6 +16,7 @@ use space::SpaceGamePlugins;
 use crate::base::*;
 use crate::base::timer::*;
 use crate::DestoType::TEntity;
+use crate::space::galaxy::SimPosition;
 use crate::space::ship::*;
 
 pub mod base;
@@ -61,48 +63,35 @@ fn setup(
 ) {
     let mut rng = thread_rng();
     for i in 0..3 {
-        let id = commands.spawn((SolarSystem {
-            anomalies: Vec::new(),
-            gates: Vec::new(),
-        },
-                                 UndockLoc,
-                                 MaterialMesh2dBundle {
-                                     mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
-                                     material: materials.add(ColorMaterial::from(Color::RED)),
-                                     transform: Transform {
-                                         translation: Vec3 {
-                                             x: -500.0 + (500.0 * i as f32),
-                                             y: 0.0,
-                                             z: 0.0,
-                                         },
-                                         scale: Vec3 { x: 64.0, y: 64.0, z: 1.0 },
-                                         ..default()
-                                     },
-                                     visibility: Visibility { is_visible: true },
-                                     ..default()
-                                 },
-                                 PickableBundle::default(), // <- Makes the mesh pickable.
-                                 /* 
-                                 SpriteBundle {
-                                     sprite: Sprite {
-                                         color: Color::rgb(0.95, 0.25, 0.25),
-                                         custom_size: Some(Vec2::new(64.0, 64.0)),
-                                         ..default()
-                                     },
-                                     transform: Transform {
-                                         translation: Vec3 {
-                                             x: -500.0 + (500.0 * i as f32),
-                                             y: 0.0,
-                                             z: 0.0,
-                                         },
-                                         ..default()
-                                     },
-                                     visibility: Visibility { is_visible: true },
-                                     ..default()
-                                 },
-                                 PickableBundle::default()
-                                 */
-        )).remove::<Selection>().id();
+        let id = commands.spawn(
+            (
+                SolarSystem {
+                    anomalies: Vec::new(),
+                    gates: Vec::new(),
+                },
+                UndockLoc,
+                SimPosition(DVec3 {
+                    x: -500.0 + (500.0 * i as f64),
+                    y: 0.0,
+                    z: 0.0,
+                },),
+                MaterialMesh2dBundle {
+                    mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
+                    material: materials.add(ColorMaterial::from(Color::RED)),
+                    transform: Transform {
+                        translation: Vec3 {
+                            x: -500.0 + (500.0 * i as f32),
+                            y: 0.0,
+                            z: 0.0,
+                        },
+                        scale: Vec3 { x: 64.0, y: 64.0, z: 1.0 },
+                        ..default()
+                    },
+                    visibility: Visibility { is_visible: true },
+                    ..default()
+                },
+                PickableBundle::default(),
+            )).remove::<Selection>().id();
 
         cluster.0.push(id);
 
@@ -186,12 +175,12 @@ fn setup(
 
 
 fn test_move(
-    mut queryShips: Query<&mut Destination, Without<TestTag>>,
-    queryTargets: Query<&Transform, With<TestTag>>) {
-    let mut t: Option<&Transform> = None;
-    let mut min_dist: f32 = f32::MAX;
-    for tr in queryTargets.iter() {
-        let dist = tr.translation.length_squared();
+    mut query_ships: Query<&mut Destination, Without<TestTag>>,
+    query_targets: Query<&SimPosition, With<TestTag>>) {
+    let mut t: Option<&SimPosition> = None;
+    let mut min_dist: f64 = f64::MAX;
+    for tr in query_targets.iter() {
+        let dist = tr.0.length_squared();
         if dist < min_dist {
             min_dist = dist;
             t = Some(tr)
@@ -200,7 +189,7 @@ fn test_move(
 
     //println!("{:?}",t);
 
-    for mut dest in &mut queryShips {
+    for mut dest in &mut query_ships {
         match t {
             Some(tr) => {
                 dest.0 = TEntity(*tr);

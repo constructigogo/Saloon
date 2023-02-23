@@ -1,8 +1,9 @@
 use bevy::{ecs::component, prelude::*, transform::components};
-use bevy::math::Vec3Swizzles;
+use bevy::math::{DVec2, DVec3, Vec3Swizzles};
 use rand::prelude::*;
 
 use crate::base::velocity::*;
+use crate::space::galaxy::SimPosition;
 use crate::space::pilot::*;
 
 use super::galaxy::GalaxyCoordinate;
@@ -27,27 +28,27 @@ impl Plugin for ShipPlugins {
 ///TODO should schedule only a few times per frame
 pub fn compute_ship_forces(
     time: Res<Time>,
-    mut query: Query<(&mut Velocity, &Transform, &Destination, &Mass, &ThrusterEngine, )>) {
-    for (mut vel, transform, dest, mass, thruster) in &mut query {
+    mut query: Query<(&mut Velocity, &SimPosition, &Destination, &Mass, &ThrusterEngine, )>) {
+    for (mut vel, sPos, dest, mass, thruster) in &mut query {
         let d_type: &DestoType = &dest.0;
-        let u: Option<Vec2> = Vec2 { x: vel.x, y: vel.y }.try_normalize();
+        let u: Option<DVec2> = DVec2 { x: vel.x, y: vel.y }.try_normalize();
 
 
         match d_type {
             DestoType::DPosition(vec) => {
                 let res = get_delta_velocity(
                     vec,
-                    &transform.translation.truncate(),
+                    &sPos.truncate(),
                     mass,
                     thruster,
-                    time.delta_seconds(),
+                    time.delta_seconds_f64(),
                 );
                 match u {
                     None => {}
                     Some(uv) => {
                         let drag_coef = 0.5 * vel.0.length_squared() * 0.225;
-                        let drag_vec: Vec2 = -uv * drag_coef;
-                        vel.0 += drag_vec * time.delta_seconds();
+                        let drag_vec: DVec2 = -uv * drag_coef;
+                        vel.0 += drag_vec * time.delta_seconds_f64();
                     }
                 }
                 match res {
@@ -57,19 +58,19 @@ pub fn compute_ship_forces(
             }
             DestoType::TEntity(ent) => {
                 let res = get_delta_velocity(
-                    &ent.translation.truncate(),
-                    &transform.translation.truncate(),
+                    &ent.0.truncate(),
+                    &sPos.truncate(),
                     mass,
                     thruster,
-                    time.delta_seconds(),
+                    time.delta_seconds_f64(),
                 );
 
                 match u {
                     None => {}
                     Some(uv) => {
                         let drag_coef = 0.5 * vel.0.length_squared() * 0.225;
-                        let drag_vec: Vec2 = -uv * drag_coef;
-                        vel.0 += drag_vec * time.delta_seconds();
+                        let drag_vec: DVec2 = -uv * drag_coef;
+                        vel.0 += drag_vec * time.delta_seconds_f64();
                     }
                 }
                 match res {
@@ -82,7 +83,7 @@ pub fn compute_ship_forces(
     }
 }
 
-fn get_delta_velocity(from: &Vec2, to: &Vec2, m: &Mass, th: &ThrusterEngine, dt: f32) -> Option<Vec2> {
+fn get_delta_velocity(from: &DVec2, to: &DVec2, m: &Mass, th: &ThrusterEngine, dt: f64) -> Option<DVec2> {
     let dir = (*from - *to).try_normalize();
     match dir {
         Some(d) => {
@@ -94,8 +95,8 @@ fn get_delta_velocity(from: &Vec2, to: &Vec2, m: &Mass, th: &ThrusterEngine, dt:
     }
 }
 
-fn get_accel(m: &Mass, th: &ThrusterEngine) -> f32 {
-    return (th.thrust / m.0) as f32;
+fn get_accel(m: &Mass, th: &ThrusterEngine) -> f64 {
+    return (th.thrust / m.0) as f64;
 }
 
 #[derive(Component)]
@@ -106,7 +107,7 @@ pub struct UndockLoc;
 pub fn undock_pilot_system(
     mut commands: Commands,
     query: Query<(Entity, &UndockingFrom)>,
-    undocks: Query<&Transform, With<UndockLoc>>) {
+    undocks: Query<&SimPosition, With<UndockLoc>>) {
     let mut rng = thread_rng();
     for (entity, from) in query.iter() {
         if let Ok(trans) = undocks.get(commands.entity(from.0).id()) {
@@ -119,7 +120,7 @@ pub fn undock_pilot_system(
                             ..default()
                         },
                         transform: Transform {
-                            translation: trans.translation,
+                            translation: Vec3::ZERO,
                             ..default()
                         },
                         visibility: Visibility { is_visible: false },
@@ -127,6 +128,7 @@ pub fn undock_pilot_system(
                     },
                     movable: MovableBundle {
                         coordinate: GalaxyCoordinate(from.0),
+                        simulation_position: *trans,
                         mass: Mass(100000),
                         velocity: Velocity::default(),
                         thruster: ThrusterEngine {
@@ -134,7 +136,7 @@ pub fn undock_pilot_system(
                             thrust: 1500000,
                             angular: 25.15,
                         },
-                        move_towards: Destination(DestoType::DPosition(Vec2 {
+                        move_towards: Destination(DestoType::DPosition(DVec2 {
                             x: rng.gen_range(-200.0..200.0),
                             y: rng.gen_range(-150.0..150.0),
                         })),
@@ -142,7 +144,7 @@ pub fn undock_pilot_system(
                 }
             ).remove::<UndockingFrom>();
         } else {
-            println!("empty ? {}", undocks.is_empty());
+
         }
     }
 }
@@ -155,8 +157,6 @@ pub struct UndockingFrom(pub Entity);
 
 #[derive(Bundle)]
 pub struct ShipBundle {
-    // You can nest bundles inside of other bundles like this
-    // Allowing you to compose their functionality
     display: SpriteBundle,
     movable: MovableBundle,
 }
@@ -165,6 +165,7 @@ pub struct ShipBundle {
 #[derive(Bundle)]
 pub(crate) struct MovableBundle {
     pub coordinate: GalaxyCoordinate,
+    pub simulation_position: SimPosition,
     pub mass: Mass,
     pub velocity: Velocity,
     pub thruster: ThrusterEngine,
@@ -219,8 +220,8 @@ pub struct Health {
 
 #[derive(Default)]
 pub enum DestoType {
-    DPosition(Vec2),
-    TEntity(Transform),
+    DPosition(DVec2),
+    TEntity(SimPosition),
     #[default]
     None,
 }

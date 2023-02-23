@@ -6,8 +6,10 @@ use super::settings::{GameplaySettings, InputSettings};
 #[derive(Resource)]
 pub struct CameraID(pub Entity);
 
-pub struct CameraControllerPlugin;
+#[derive(Resource)]
+pub struct CameraZoom(f64);
 
+pub struct CameraControllerPlugin;
 impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup);
@@ -21,7 +23,8 @@ fn setup(mut commands: Commands) {
         PickingCameraBundle::default()
     )).id();
 
-    commands.insert_resource(CameraID(id))
+    commands.insert_resource(CameraID(id));
+    commands.insert_resource(CameraZoom(200.0));
 }
 
 
@@ -30,7 +33,7 @@ fn camera_input(time: Res<Time>,
                 keys: Res<Input<ScanCode>>,
                 camera_id: Res<CameraID>,
                 settings: Res<GameplaySettings>,
-                inputSettings: Res<InputSettings>,
+                input_settings: Res<InputSettings>,
                 mut motion_evr: EventReader<MouseMotion>,
                 buttons: Res<Input<MouseButton>>) {
 
@@ -41,6 +44,7 @@ fn camera_input(time: Res<Time>,
         Ok(mut tr) => {
             let mut dir = Vec3::ZERO;
             //mouse drag
+            /*
             if buttons.pressed(MouseButton::Left) {
                 for ev in motion_evr.iter() {
                     dir += Vec3 {
@@ -50,9 +54,10 @@ fn camera_input(time: Res<Time>,
                     }
                 }
             }
+            */
 
             //keyboard
-            match inputSettings.camera_up {
+            match input_settings.camera_up {
                 Some(code) => {
                     if keys.pressed(code) {
                         dir += Vec3::Y;
@@ -60,7 +65,7 @@ fn camera_input(time: Res<Time>,
                 }
                 None => {}
             }
-            match inputSettings.camera_down {
+            match input_settings.camera_down {
                 Some(code) => {
                     if keys.pressed(code) {
                         dir += Vec3::NEG_Y;
@@ -68,7 +73,7 @@ fn camera_input(time: Res<Time>,
                 }
                 None => {}
             }
-            match inputSettings.camera_right {
+            match input_settings.camera_right {
                 Some(code) => {
                     if keys.pressed(code) {
                         dir += Vec3::X;
@@ -76,7 +81,7 @@ fn camera_input(time: Res<Time>,
                 }
                 None => {}
             }
-            match inputSettings.camera_left {
+            match input_settings.camera_left {
                 Some(code) => {
                     if keys.pressed(code) {
                         dir += Vec3::NEG_X;

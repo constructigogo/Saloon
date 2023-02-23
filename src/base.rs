@@ -9,6 +9,7 @@ pub mod timer;
 pub mod velocity;
 pub mod camera;
 pub mod settings;
+pub mod appstate;
 
 
 pub fn frame_update(time: Res<Time>) {
@@ -26,7 +27,7 @@ impl PluginGroup for BaseLogicPlugins {
         PluginGroupBuilder::start::<Self>()
             .add(GameSettingsPlugin)
             .add(CameraControllerPlugin)
-            .add(VelocityPlugin)
+            //.add(VelocityPlugin)
     }
 }
 
