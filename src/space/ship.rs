@@ -15,6 +15,7 @@ pub mod pilot;
 
 
 pub struct ShipPlugins;
+
 impl Plugin for ShipPlugins {
     fn build(&self, app: &mut App) {
         app
@@ -29,7 +30,7 @@ pub fn compute_ship_forces(
     mut query: Query<(&mut Velocity, &Transform, &Destination, &Mass, &ThrusterEngine, )>) {
     for (mut vel, transform, dest, mass, thruster) in &mut query {
         let d_type: &DestoType = &dest.0;
-        let u : Option<Vec2>= Vec2 { x: vel.x, y: vel.y }.try_normalize();
+        let u: Option<Vec2> = Vec2 { x: vel.x, y: vel.y }.try_normalize();
 
 
         match d_type {
@@ -39,21 +40,20 @@ pub fn compute_ship_forces(
                     &transform.translation.truncate(),
                     mass,
                     thruster,
-                    time.delta_seconds()
+                    time.delta_seconds(),
                 );
                 match u {
                     None => {}
                     Some(uv) => {
-                        let drag_coef= 0.5*vel.0.length_squared()*0.225;
-                        let drag_vec:Vec2= -uv*drag_coef;
-                        vel.0 += drag_vec*time.delta_seconds();
+                        let drag_coef = 0.5 * vel.0.length_squared() * 0.225;
+                        let drag_vec: Vec2 = -uv * drag_coef;
+                        vel.0 += drag_vec * time.delta_seconds();
                     }
                 }
                 match res {
                     None => {}
-                    Some(acc_dt) => {vel.0 +=acc_dt}
+                    Some(acc_dt) => { vel.0 += acc_dt }
                 }
-
             }
             DestoType::TEntity(ent) => {
                 let res = get_delta_velocity(
@@ -61,29 +61,28 @@ pub fn compute_ship_forces(
                     &transform.translation.truncate(),
                     mass,
                     thruster,
-                    time.delta_seconds()
+                    time.delta_seconds(),
                 );
 
                 match u {
                     None => {}
                     Some(uv) => {
-                        let drag_coef= 0.5*vel.0.length_squared()*0.225;
-                        let drag_vec:Vec2= -uv*drag_coef;
-                        vel.0 += drag_vec*time.delta_seconds();
+                        let drag_coef = 0.5 * vel.0.length_squared() * 0.225;
+                        let drag_vec: Vec2 = -uv * drag_coef;
+                        vel.0 += drag_vec * time.delta_seconds();
                     }
                 }
                 match res {
                     None => {}
-                    Some(acc_dt) => {vel.0 +=acc_dt}
+                    Some(acc_dt) => { vel.0 += acc_dt }
                 }
-
             }
             _ => {}
         }
     }
 }
 
-fn get_delta_velocity(from : &Vec2, to: &Vec2, m: &Mass, th: &ThrusterEngine,dt : f32) -> Option<Vec2> {
+fn get_delta_velocity(from: &Vec2, to: &Vec2, m: &Mass, th: &ThrusterEngine, dt: f32) -> Option<Vec2> {
     let dir = (*from - *to).try_normalize();
     match dir {
         Some(d) => {
@@ -106,12 +105,11 @@ pub struct UndockLoc;
 
 pub fn undock_pilot_system(
     mut commands: Commands,
-    query: Query<(Entity,&UndockingFrom)>,
-    undocks : Query<&Transform,With<UndockLoc>>){
-
+    query: Query<(Entity, &UndockingFrom)>,
+    undocks: Query<&Transform, With<UndockLoc>>) {
     let mut rng = thread_rng();
-    for (entity,from) in query.iter() {
-        if let Ok(trans) = undocks.get(commands.entity(from.0).id()){
+    for (entity, from) in query.iter() {
+        if let Ok(trans) = undocks.get(commands.entity(from.0).id()) {
             commands.entity(entity).insert(
                 ShipBundle {
                     display: SpriteBundle {
@@ -124,28 +122,27 @@ pub fn undock_pilot_system(
                             translation: trans.translation,
                             ..default()
                         },
-                        visibility : Visibility { is_visible: false },
+                        visibility: Visibility { is_visible: false },
                         ..default()
                     },
                     movable: MovableBundle {
-                        coordinate : GalaxyCoordinate(from.0),
+                        coordinate: GalaxyCoordinate(from.0),
                         mass: Mass(100000),
                         velocity: Velocity::default(),
                         thruster: ThrusterEngine {
-                            max_speed : 10.0,
+                            max_speed: 10.0,
                             thrust: 1500000,
                             angular: 25.15,
                         },
-                        move_towards: Destination(DestoType::DPosition(Vec2 { 
-                            x: rng.gen_range(-200.0..200.0), 
-                            y: rng.gen_range(-150.0..150.0) 
+                        move_towards: Destination(DestoType::DPosition(Vec2 {
+                            x: rng.gen_range(-200.0..200.0),
+                            y: rng.gen_range(-150.0..150.0),
                         })),
                     },
                 }
             ).remove::<UndockingFrom>();
-        }
-        else {
-            println!("empty ? {}",undocks.is_empty());
+        } else {
+            println!("empty ? {}", undocks.is_empty());
         }
     }
 }
@@ -167,7 +164,7 @@ pub struct ShipBundle {
 ///Anything movable should be made with this bundle
 #[derive(Bundle)]
 pub(crate) struct MovableBundle {
-    pub coordinate : GalaxyCoordinate,
+    pub coordinate: GalaxyCoordinate,
     pub mass: Mass,
     pub velocity: Velocity,
     pub thruster: ThrusterEngine,
@@ -195,7 +192,7 @@ pub struct Mass(u64);
 #[derive(Component)]
 pub struct ThrusterEngine {
     // m/s
-    max_speed : f32,
+    max_speed: f32,
     ///Thrust in Newton (N)
     thrust: u64,
     ///Angular in degree/sec
@@ -227,7 +224,6 @@ pub enum DestoType {
     #[default]
     None,
 }
-
 
 
 #[derive(Component, Deref, DerefMut)]

@@ -1,14 +1,13 @@
-use bevy::{prelude::*, input::{keyboard::KeyboardInput, ButtonState, mouse::MouseMotion}};
+use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::MouseMotion}, prelude::*};
 use bevy_mod_picking::PickingCameraBundle;
 
 use super::settings::{GameplaySettings, InputSettings};
-
-
 
 #[derive(Resource)]
 pub struct CameraID(pub Entity);
 
 pub struct CameraControllerPlugin;
+
 impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup);
@@ -16,26 +15,24 @@ impl Plugin for CameraControllerPlugin {
     }
 }
 
-fn setup(mut commands: Commands,){
+fn setup(mut commands: Commands) {
     let id = commands.spawn((
         Camera2dBundle::default(),
         PickingCameraBundle::default()
     )).id();
 
     commands.insert_resource(CameraID(id))
-
 }
 
 
-
 fn camera_input(time: Res<Time>,
-    mut camera_query : Query<&mut Transform, With<Camera>>,
-    keys : Res<Input<ScanCode>>,
-    camera_id : Res<CameraID>,
-    settings : Res<GameplaySettings>,
-    inputSettings : Res<InputSettings>,
-    mut motion_evr: EventReader<MouseMotion>,
-    buttons: Res<Input<MouseButton>>) {
+                mut camera_query: Query<&mut Transform, With<Camera>>,
+                keys: Res<Input<ScanCode>>,
+                camera_id: Res<CameraID>,
+                settings: Res<GameplaySettings>,
+                inputSettings: Res<InputSettings>,
+                mut motion_evr: EventReader<MouseMotion>,
+                buttons: Res<Input<MouseButton>>) {
 
     //get the camera first before checking inputs
     //also check if unique
@@ -46,49 +43,49 @@ fn camera_input(time: Res<Time>,
             //mouse drag
             if buttons.pressed(MouseButton::Left) {
                 for ev in motion_evr.iter() {
-                    dir += Vec3{
+                    dir += Vec3 {
                         x: -ev.delta.x,
                         y: ev.delta.y,
                         z: 0.0,
                     }
                 }
             }
-            
+
             //keyboard
             match inputSettings.camera_up {
                 Some(code) => {
-                    if keys.pressed(code){
+                    if keys.pressed(code) {
                         dir += Vec3::Y;
                     }
-                },
-                None => {},
+                }
+                None => {}
             }
             match inputSettings.camera_down {
                 Some(code) => {
-                    if keys.pressed(code){
+                    if keys.pressed(code) {
                         dir += Vec3::NEG_Y;
                     }
-                },
-                None => {},
+                }
+                None => {}
             }
             match inputSettings.camera_right {
                 Some(code) => {
-                    if keys.pressed(code){
+                    if keys.pressed(code) {
                         dir += Vec3::X;
                     }
-                },
-                None => {},
+                }
+                None => {}
             }
             match inputSettings.camera_left {
                 Some(code) => {
-                    if keys.pressed(code){
+                    if keys.pressed(code) {
                         dir += Vec3::NEG_X;
                     }
-                },
-                None => {},
+                }
+                None => {}
             }
             tr.translation += dir * 512.0 * time.delta_seconds()
-        },
-        Err(_) => {},
+        }
+        Err(_) => {}
     }
 }

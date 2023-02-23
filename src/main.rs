@@ -3,13 +3,12 @@ use std::default;
 use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
-
-use bevy_editor_pls::prelude::*;
-
 use bevy::sprite::MaterialMesh2dBundle;
+use bevy_editor_pls::prelude::*;
 use bevy_mod_picking::*;
-use rand::{thread_rng, Rng};
-use space::galaxy::{SystemMap, SolarSystem, GalaxyCoordinate};
+use rand::{Rng, thread_rng};
+
+use space::galaxy::{GalaxyCoordinate, SolarSystem, SystemMap};
 use space::ship::pilot::*;
 use space::SpaceGamePlugins;
 
@@ -60,51 +59,50 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut cluster: ResMut<SystemMap>,
 ) {
-    
     let mut rng = thread_rng();
     for i in 0..3 {
-        let id = commands.spawn((SolarSystem{
+        let id = commands.spawn((SolarSystem {
             anomalies: Vec::new(),
-            gates:Vec::new(),
+            gates: Vec::new(),
         },
-        UndockLoc,
-        MaterialMesh2dBundle {
-            mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
-            material: materials.add(ColorMaterial::from(Color::RED)),
-            transform: Transform {
-                translation: Vec3 {
-                    x: -500.0 + (500.0 * i as f32),
-                    y: 0.0,
-                    z: 0.0,
-                },
-                scale : Vec3 { x: 64.0, y: 64.0, z: 1.0 },
-                ..default()
-            },
-            visibility: Visibility { is_visible: true },
-            ..default()
-        },
-        PickableBundle::default(), // <- Makes the mesh pickable.
-        /* 
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgb(0.95, 0.25, 0.25),
-                custom_size: Some(Vec2::new(64.0, 64.0)),
-                ..default()
-            },
-            transform: Transform {
-                translation: Vec3 {
-                    x: -500.0 + (500.0 * i as f32),
-                    y: 0.0,
-                    z: 0.0,
-                },
-                ..default()
-            },
-            visibility: Visibility { is_visible: true },
-            ..default()
-        },
-        PickableBundle::default()
-        */
-    )).remove::<Selection>().id();
+                                 UndockLoc,
+                                 MaterialMesh2dBundle {
+                                     mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
+                                     material: materials.add(ColorMaterial::from(Color::RED)),
+                                     transform: Transform {
+                                         translation: Vec3 {
+                                             x: -500.0 + (500.0 * i as f32),
+                                             y: 0.0,
+                                             z: 0.0,
+                                         },
+                                         scale: Vec3 { x: 64.0, y: 64.0, z: 1.0 },
+                                         ..default()
+                                     },
+                                     visibility: Visibility { is_visible: true },
+                                     ..default()
+                                 },
+                                 PickableBundle::default(), // <- Makes the mesh pickable.
+                                 /* 
+                                 SpriteBundle {
+                                     sprite: Sprite {
+                                         color: Color::rgb(0.95, 0.25, 0.25),
+                                         custom_size: Some(Vec2::new(64.0, 64.0)),
+                                         ..default()
+                                     },
+                                     transform: Transform {
+                                         translation: Vec3 {
+                                             x: -500.0 + (500.0 * i as f32),
+                                             y: 0.0,
+                                             z: 0.0,
+                                         },
+                                         ..default()
+                                     },
+                                     visibility: Visibility { is_visible: true },
+                                     ..default()
+                                 },
+                                 PickableBundle::default()
+                                 */
+        )).remove::<Selection>().id();
 
         cluster.0.push(id);
 
@@ -139,7 +137,7 @@ fn setup(
         }
     }
 
-    
+
 
     /* 
     // Cube
@@ -188,10 +186,10 @@ fn setup(
 
 
 fn test_move(
-    mut queryShips : Query<&mut Destination, Without<TestTag>>,
-    queryTargets: Query<&Transform, With<TestTag>>){
-    let mut t : Option<&Transform> = None;
-    let mut min_dist : f32=f32::MAX;
+    mut queryShips: Query<&mut Destination, Without<TestTag>>,
+    queryTargets: Query<&Transform, With<TestTag>>) {
+    let mut t: Option<&Transform> = None;
+    let mut min_dist: f32 = f32::MAX;
     for tr in queryTargets.iter() {
         let dist = tr.translation.length_squared();
         if dist < min_dist {
@@ -209,6 +207,5 @@ fn test_move(
             }
             None => {}
         }
-
     }
 }

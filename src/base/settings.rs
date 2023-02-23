@@ -2,8 +2,8 @@ use std::default;
 
 use bevy::prelude::*;
 
-
 pub struct GameSettingsPlugin;
+
 impl Plugin for GameSettingsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameplaySettings::default());
@@ -13,29 +13,31 @@ impl Plugin for GameSettingsPlugin {
 
 
 #[derive(Resource)]
-pub struct GameplaySettings{
-    pub camera_keyboard_sensivity : f32,
+pub struct GameplaySettings {
+    pub camera_keyboard_sensivity: f32,
 }
-impl Default for GameplaySettings{
+
+impl Default for GameplaySettings {
     fn default() -> Self {
         Self { camera_keyboard_sensivity: 0.5 }
     }
 }
 
 #[derive(Resource)]
-pub struct InputSettings{
-    pub camera_up : Option<ScanCode>,
-    pub camera_down : Option<ScanCode>,
-    pub camera_left : Option<ScanCode>,
-    pub camera_right : Option<ScanCode>,
+pub struct InputSettings {
+    pub camera_up: Option<ScanCode>,
+    pub camera_down: Option<ScanCode>,
+    pub camera_left: Option<ScanCode>,
+    pub camera_right: Option<ScanCode>,
 }
-impl Default for InputSettings{
+
+impl Default for InputSettings {
     fn default() -> Self {
-        Self { 
-            camera_up: Some(ScanCode(17)), 
-            camera_down: Some(ScanCode(31)), 
-            camera_left: Some(ScanCode(30)), 
-            camera_right: Some(ScanCode(32)),  
+        Self {
+            camera_up: Some(ScanCode(17)),
+            camera_down: Some(ScanCode(31)),
+            camera_left: Some(ScanCode(30)),
+            camera_right: Some(ScanCode(32)),
         }
     }
 }
