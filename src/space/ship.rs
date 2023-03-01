@@ -55,11 +55,22 @@ pub fn compute_ship_forces(
 
 
             match thrust_dir {
-                None => {}
+                None => {
+                    let local_vel = vel.0;
+                    vel.0 += (drag - local_vel.normalize() * accel) * time.delta_seconds_f64()
+                }
                 Some(dir) => {
-                    vel.0 += ((drag +
-                        dir * accel
-                    )) * time.delta_seconds_f64();
+                    let local_vel: DVec2 = vel.0;
+                    let brake = dist / accel < local_vel.length() / accel;
+
+                    if brake {
+                        vel.0 += (drag - local_vel.normalize() * accel) * time.delta_seconds_f64()
+                    } else {
+                        vel.0 += ((drag +
+                            dir * accel
+                        )) * time.delta_seconds_f64();
+                    }
+
                     println!("vel  = {:?}, accel = {:?}, drag = {:?}, dist = {:?}, value = {:?}", amplitude, accel, drag.length(),dist, 0.0);
                 }
             }
