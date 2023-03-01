@@ -27,7 +27,7 @@ impl Plugin for GalaxyPlugin {
         app
             .add_state(ViewState::GALAXY)
             .insert_resource(SystemMap(Vec::new()))
-            .insert_resource(GalaxyScale(1.0))
+            .insert_resource(GalaxyScale(0.000001))
             .add_event::<HideGalaxyEvent>()
             .add_event::<HideSystemEvent>()
             .add_event::<RenderGalaxyEvent>()

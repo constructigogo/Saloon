@@ -95,7 +95,7 @@ fn setup(
 
         cluster.0.push(id);
 
-        for _ in 0..10 {
+        for _ in 0..1 {
             /* 
             commands.spawn((
             SpriteBundle {

@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 use bevy::{ecs::component, prelude::*, transform::components};
 use bevy::math::{DVec2, DVec3, Vec3Swizzles};
 use rand::prelude::*;
@@ -19,7 +21,7 @@ pub mod pilot;
 pub fn compute_ship_forces(
     time: Res<Time>,
     mut query: Query<(&mut Velocity, &SimPosition, &Destination, &Mass, &ThrusterEngine, )>) {
-    query.par_for_each_mut(8,|(mut vel, sPos, dest, mass, thruster)|
+    query.par_for_each_mut(8, |(mut vel, sPos, dest, mass, thruster)|
         {
             let desto_type: &DestoType = &dest.0;
             let direction: Option<DVec2> = DVec2 { x: vel.x, y: vel.y }.try_normalize();
@@ -30,26 +32,35 @@ pub fn compute_ship_forces(
             match direction {
                 None => { drag = DVec2::ZERO }
                 Some(dir) => {
-                    drag = -dir * (0.5 * 1.0 * amplitude);
+                    drag = -dir * (0.02 * 0.35 * ((amplitude * amplitude)));
                 }
             }
 
             let mut thrust_dir: Option<DVec2> = None;
+            let dist: f64;
 
             match desto_type {
                 DestoType::DPosition(dPos) => {
-                    thrust_dir = Some(*dPos - sPos.0.truncate());
+                    dist = (*dPos - sPos.0.truncate()).length() / 0.000001;
+                    thrust_dir = Some((*dPos - sPos.0.truncate()).normalize());
                 }
                 DestoType::TEntity(dPos) => {
-                    thrust_dir = Some(dPos.0.truncate() - sPos.0.truncate());
+                    dist = (dPos.0.truncate() - sPos.0.truncate()).length() / 0.000001;
+                    thrust_dir = Some((dPos.0.truncate() - sPos.0.truncate()).normalize());
                 }
-                DestoType::None => {}
+                DestoType::None => {
+                    dist = 0.0;
+                }
             }
+
 
             match thrust_dir {
                 None => {}
                 Some(dir) => {
-                    vel.0 += drag + (dir * accel * time.delta_seconds_f64());
+                    vel.0 += ((drag +
+                        dir * accel
+                    )) * time.delta_seconds_f64();
+                    println!("vel  = {:?}, accel = {:?}, drag = {:?}, dist = {:?}, value = {:?}", amplitude, accel, drag.length(),dist, 0.0);
                 }
             }
         });
@@ -101,17 +112,17 @@ pub fn undock_pilot_system(
                     },
                     movable: MovableBundle {
                         coordinate: GalaxyCoordinate(from.0),
-                        simulation_position: SimPosition(trans.0 * 3.0),
-                        mass: Mass(100000),
+                        simulation_position: SimPosition((trans.0 * 3.0) * 0.000001),
+                        mass: Mass(1500000),
                         velocity: Velocity::default(),
                         thruster: ThrusterEngine {
-                            max_speed: 10.0,
-                            thrust: 1500000,
+                            max_speed: 100.0,
+                            thrust: 100000000,
                             angular: 25.15,
                         },
                         move_towards: Destination(DestoType::DPosition(DVec2 {
-                            x: rng.gen_range(-200.0..200.0),
-                            y: rng.gen_range(-150.0..150.0),
+                            x: rng.gen_range(-0.0002..0.0002),
+                            y: rng.gen_range(-0.00015..0.00015),
                         })),
                     },
                 }
@@ -163,7 +174,7 @@ pub struct Mass(u64);
 #[derive(Component)]
 pub struct ThrusterEngine {
     // m/s
-    max_speed: f32,
+    max_speed: f64,
     ///Thrust in Newton (N)
     thrust: u64,
     ///Angular in degree/sec

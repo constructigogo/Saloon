@@ -20,12 +20,12 @@ pub fn project_to_camera(camera_zoom: Res<CameraZoom>,
             let transf: &Transform = cam.1;
             for (mut trans, sPos) in query.iter_mut() {
                 let calc = Vec3 {
-                    x: ((sPos.0.x / camera_zoom.0) as f32).clamp(
-                        (transf.translation.x -((camera.physical_viewport_size().unwrap().x - 48) / 2) as f32),
-                        (transf.translation.x +((camera.physical_viewport_size().unwrap().x - 48) / 2) as f32)),
-                    y: ((sPos.0.y / camera_zoom.0) as f32).clamp(
-                        (transf.translation.y -((camera.physical_viewport_size().unwrap().y - 48) / 2) as f32),
-                        (transf.translation.y +((camera.physical_viewport_size().unwrap().y - 48) / 2) as f32)),
+                    x: ((sPos.0.x / (camera_zoom.0 * 0.000001)) as f32).clamp(
+                        (transf.translation.x - ((camera.physical_viewport_size().unwrap().x - 48) / 2) as f32),
+                        (transf.translation.x + ((camera.physical_viewport_size().unwrap().x - 48) / 2) as f32)),
+                    y: ((sPos.0.y / (camera_zoom.0 * 0.000001)) as f32).clamp(
+                        (transf.translation.y - ((camera.physical_viewport_size().unwrap().y - 48) / 2) as f32),
+                        (transf.translation.y + ((camera.physical_viewport_size().unwrap().y - 48) / 2) as f32)),
                     z: 0.0,
                 };
                 trans.translation = calc
