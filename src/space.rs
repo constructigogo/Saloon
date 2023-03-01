@@ -22,12 +22,12 @@ impl PluginGroup for SpaceGamePlugins {
 }
 
 pub struct GalaxyPlugin;
-
 impl Plugin for GalaxyPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_state(ViewState::GALAXY)
             .insert_resource(SystemMap(Vec::new()))
+            .insert_resource(GalaxyScale(1.0))
             .add_event::<HideGalaxyEvent>()
             .add_event::<HideSystemEvent>()
             .add_event::<RenderGalaxyEvent>()
@@ -42,4 +42,14 @@ impl Plugin for GalaxyPlugin {
             .add_system(generate_system_view);
     }
 }
+
+pub struct ShipPlugins;
+impl Plugin for ShipPlugins {
+    fn build(&self, app: &mut App) {
+        app
+            .add_system(compute_ship_forces)
+            .add_system(undock_pilot_system);
+    }
+}
+
 

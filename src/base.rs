@@ -27,7 +27,7 @@ impl PluginGroup for BaseLogicPlugins {
         PluginGroupBuilder::start::<Self>()
             .add(GameSettingsPlugin)
             .add(CameraControllerPlugin)
-            //.add(VelocityPlugin)
+            .add(VelocityPlugin)
     }
 }
 

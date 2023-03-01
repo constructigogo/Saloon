@@ -13,6 +13,9 @@ pub struct SystemMap(pub Vec<Entity>);
 #[derive(Component, Deref)]
 pub struct GalaxyCoordinate(pub Entity);
 
+#[derive(Resource, Deref)]
+pub struct GalaxyScale(pub f64);
+
 /// Since coordinates are float we need to avoid going into large coordinates value
 #[derive(Component)]
 pub struct SolarSystem {
@@ -22,7 +25,7 @@ pub struct SolarSystem {
 }
 
 /// Position for simulation
-#[derive(Component, Default, Copy, Clone, Deref, DerefMut)]
+#[derive(Component, Default, Copy, Clone, Deref, DerefMut, Reflect)]
 pub struct SimPosition(pub DVec3);
 
 #[derive(Bundle)]

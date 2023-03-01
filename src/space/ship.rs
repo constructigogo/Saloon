@@ -15,72 +15,44 @@ pub mod velocity;
 pub mod pilot;
 
 
-pub struct ShipPlugins;
-
-impl Plugin for ShipPlugins {
-    fn build(&self, app: &mut App) {
-        app
-            .add_system(compute_ship_forces)
-            .add_system(undock_pilot_system);
-    }
-}
-
 ///TODO should schedule only a few times per frame
 pub fn compute_ship_forces(
     time: Res<Time>,
     mut query: Query<(&mut Velocity, &SimPosition, &Destination, &Mass, &ThrusterEngine, )>) {
-    for (mut vel, sPos, dest, mass, thruster) in &mut query {
-        let d_type: &DestoType = &dest.0;
-        let u: Option<DVec2> = DVec2 { x: vel.x, y: vel.y }.try_normalize();
+    query.par_for_each_mut(8,|(mut vel, sPos, dest, mass, thruster)|
+        {
+            let desto_type: &DestoType = &dest.0;
+            let direction: Option<DVec2> = DVec2 { x: vel.x, y: vel.y }.try_normalize();
+            let amplitude: f64 = vel.length();
+            let accel: f64 = get_accel(mass, thruster);
+            let drag: DVec2;
 
-
-        match d_type {
-            DestoType::DPosition(vec) => {
-                let res = get_delta_velocity(
-                    vec,
-                    &sPos.truncate(),
-                    mass,
-                    thruster,
-                    time.delta_seconds_f64(),
-                );
-                match u {
-                    None => {}
-                    Some(uv) => {
-                        let drag_coef = 0.5 * vel.0.length_squared() * 0.225;
-                        let drag_vec: DVec2 = -uv * drag_coef;
-                        vel.0 += drag_vec * time.delta_seconds_f64();
-                    }
-                }
-                match res {
-                    None => {}
-                    Some(acc_dt) => { vel.0 += acc_dt }
+            match direction {
+                None => { drag = DVec2::ZERO }
+                Some(dir) => {
+                    drag = -dir * (0.5 * 1.0 * amplitude);
                 }
             }
-            DestoType::TEntity(ent) => {
-                let res = get_delta_velocity(
-                    &ent.0.truncate(),
-                    &sPos.truncate(),
-                    mass,
-                    thruster,
-                    time.delta_seconds_f64(),
-                );
 
-                match u {
-                    None => {}
-                    Some(uv) => {
-                        let drag_coef = 0.5 * vel.0.length_squared() * 0.225;
-                        let drag_vec: DVec2 = -uv * drag_coef;
-                        vel.0 += drag_vec * time.delta_seconds_f64();
-                    }
+            let mut thrust_dir: Option<DVec2> = None;
+
+            match desto_type {
+                DestoType::DPosition(dPos) => {
+                    thrust_dir = Some(*dPos - sPos.0.truncate());
                 }
-                match res {
-                    None => {}
-                    Some(acc_dt) => { vel.0 += acc_dt }
+                DestoType::TEntity(dPos) => {
+                    thrust_dir = Some(dPos.0.truncate() - sPos.0.truncate());
+                }
+                DestoType::None => {}
+            }
+
+            match thrust_dir {
+                None => {}
+                Some(dir) => {
+                    vel.0 += drag + (dir * accel * time.delta_seconds_f64());
                 }
             }
-            _ => {}
-        }
-    }
+        });
 }
 
 fn get_delta_velocity(from: &DVec2, to: &DVec2, m: &Mass, th: &ThrusterEngine, dt: f64) -> Option<DVec2> {
@@ -95,6 +67,7 @@ fn get_delta_velocity(from: &DVec2, to: &DVec2, m: &Mass, th: &ThrusterEngine, d
     }
 }
 
+#[inline]
 fn get_accel(m: &Mass, th: &ThrusterEngine) -> f64 {
     return (th.thrust / m.0) as f64;
 }
@@ -128,7 +101,7 @@ pub fn undock_pilot_system(
                     },
                     movable: MovableBundle {
                         coordinate: GalaxyCoordinate(from.0),
-                        simulation_position: SimPosition(trans.0*3.0),
+                        simulation_position: SimPosition(trans.0 * 3.0),
                         mass: Mass(100000),
                         velocity: Velocity::default(),
                         thruster: ThrusterEngine {
@@ -143,9 +116,7 @@ pub fn undock_pilot_system(
                     },
                 }
             ).remove::<UndockingFrom>();
-        } else {
-
-        }
+        } else {}
     }
 }
 
@@ -181,7 +152,6 @@ pub struct ShipStatsBundle {
 #[derive(Bundle)]
 pub struct DamageableBundle {
     health: Health,
-
 }
 
 
