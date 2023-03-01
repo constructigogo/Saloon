@@ -71,7 +71,7 @@ pub fn compute_ship_forces(
                         )) * time.delta_seconds_f64();
                     }
 
-                    println!("vel  = {:?}, accel = {:?}, drag = {:?}, dist = {:?}, value = {:?}", amplitude, accel, drag.length(),dist, 0.0);
+                    //println!("vel  = {:?}, accel = {:?}, drag = {:?}, dist = {:?}, value = {:?}", amplitude, accel, drag.length(),dist, 0.0);
                 }
             }
         });
@@ -102,7 +102,7 @@ pub struct UndockLoc;
 pub fn undock_pilot_system(
     mut commands: Commands,
     query: Query<(Entity, &UndockingFrom)>,
-    undocks: Query<&SimPosition, With<UndockLoc>>) {
+    undocks: Query<(&SimPosition,&GalaxyCoordinate) , With<UndockLoc>>) {
     let mut rng = thread_rng();
     for (entity, from) in query.iter() {
         if let Ok(trans) = undocks.get(commands.entity(from.0).id()) {
@@ -122,8 +122,8 @@ pub fn undock_pilot_system(
                         ..default()
                     },
                     movable: MovableBundle {
-                        coordinate: GalaxyCoordinate(from.0),
-                        simulation_position: SimPosition((trans.0 * 3.0) * 0.000001),
+                        coordinate: GalaxyCoordinate(trans.1.0),
+                        simulation_position: SimPosition((trans.0.0 * 3.0) * 0.000001),
                         mass: Mass(1500000),
                         velocity: Velocity::default(),
                         thruster: ThrusterEngine {
@@ -138,7 +138,7 @@ pub fn undock_pilot_system(
                     },
                 }
             ).remove::<UndockingFrom>();
-        } else {}
+        } else {println!("invalid pos")}
     }
 }
 

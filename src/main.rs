@@ -18,6 +18,7 @@ use crate::base::timer::*;
 use crate::DestoType::TEntity;
 use crate::space::galaxy::SimPosition;
 use crate::space::ship::*;
+use crate::space::station::{AnchorableBundle, spawn_station_at};
 
 pub mod base;
 pub mod space;
@@ -74,7 +75,7 @@ fn setup(
                     x: -500.0 + (500.0 * i as f64),
                     y: 0.0,
                     z: 0.0,
-                },),
+                }, ),
                 MaterialMesh2dBundle {
                     mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
                     material: materials.add(ColorMaterial::from(Color::RED)),
@@ -95,33 +96,15 @@ fn setup(
 
         cluster.0.push(id);
 
-        for _ in 0..1 {
-            /* 
-            commands.spawn((
-            SpriteBundle {
-                sprite: Sprite {
-                    color: Color::rgb(0.25, 0.25, 0.75),
-                    custom_size: Some(Vec2::new(24.0, 24.0)),
-                    ..default()
-                },
-                transform: Transform {
-                    translation: Vec3 {
-                        x: rng.gen_range(-200.0..200.0),
-                        y: rng.gen_range(-150.0..150.0),
-                        z: 0.0,
-                    },
-                    ..default()
-                },
-                visibility: Visibility { is_visible: false },
-                ..default()
-            },
-            GalaxyCoordinate(id),
-            ));
-            */
+        let station = commands.spawn((
+            spawn_station_at(SimPosition(DVec3::ZERO), id),
+            UndockLoc,
+        )).id();
 
+        for _ in 0..10 {
             commands.spawn((
                 spawn_new_pilot(),
-                UndockingFrom(id),
+                UndockingFrom(station),
             ));
         }
     }

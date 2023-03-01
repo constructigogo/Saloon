@@ -10,6 +10,7 @@ pub mod ship;
 pub mod pilot;
 pub mod galaxy;
 pub mod project;
+pub mod station;
 
 pub struct SpaceGamePlugins;
 
