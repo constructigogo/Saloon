@@ -16,7 +16,7 @@ use space::SpaceGamePlugins;
 use crate::base::*;
 use crate::base::timer::*;
 use crate::DestoType::TEntity;
-use crate::space::galaxy::SimPosition;
+use crate::space::galaxy::{Rendered, SimPosition};
 use crate::space::ship::*;
 use crate::space::station::{AnchorableBundle, spawn_station_at};
 
@@ -72,7 +72,7 @@ fn setup(
                 },
                 UndockLoc,
                 SimPosition(DVec3 {
-                    x: -500.0 + (500.0 * i as f64),
+                    x: (-500.0 + (500.0 * i as f64)) *0.00001,
                     y: 0.0,
                     z: 0.0,
                 }, ),
@@ -92,6 +92,7 @@ fn setup(
                     ..default()
                 },
                 PickableBundle::default(),
+                Rendered,
             )).remove::<Selection>().id();
 
         cluster.0.push(id);
@@ -100,6 +101,25 @@ fn setup(
             spawn_station_at(SimPosition(DVec3::ZERO), id),
             UndockLoc,
         )).id();
+
+        let far = commands.spawn((
+            spawn_station_at(SimPosition(DVec3 {
+                x: 150000.0,
+                y: 0.0,
+                z: 0.0
+            }), id),
+            UndockLoc,
+        )).id();
+
+        let far = commands.spawn((
+            spawn_station_at(SimPosition(DVec3 {
+                x: 1500000.0,
+                y: 0.0,
+                z: 0.0
+            }), id),
+            UndockLoc,
+        )).id();
+
 
         for _ in 0..10 {
             commands.spawn((
