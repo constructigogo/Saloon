@@ -16,7 +16,8 @@ use space::SpaceGamePlugins;
 use crate::base::*;
 use crate::base::timer::*;
 use crate::DestoType::TEntity;
-use crate::space::galaxy::{Rendered, SimPosition};
+use crate::space::anomalies::spawn_anom;
+use crate::space::galaxy::{Rendered, SimPosition, to_system};
 use crate::space::ship::*;
 use crate::space::station::{AnchorableBundle, spawn_station_at};
 
@@ -72,7 +73,7 @@ fn setup(
                 },
                 UndockLoc,
                 SimPosition(DVec3 {
-                    x: (-500.0 + (500.0 * i as f64)) *0.00001,
+                    x: (-500.0 + (500.0 * i as f64)) * 0.00001,
                     y: 0.0,
                     z: 0.0,
                 }, ),
@@ -106,7 +107,7 @@ fn setup(
             spawn_station_at(SimPosition(DVec3 {
                 x: 150000.0,
                 y: 0.0,
-                z: 0.0
+                z: 0.0,
             }), id),
             UndockLoc,
         )).id();
@@ -115,11 +116,18 @@ fn setup(
             spawn_station_at(SimPosition(DVec3 {
                 x: 1500000.0,
                 y: 0.0,
-                z: 0.0
+                z: 0.0,
             }), id),
             UndockLoc,
         )).id();
 
+        let anom = commands.spawn((
+            spawn_anom(SimPosition(DVec3{
+                x: to_system(400.0),
+                y: to_system(400.0),
+                z: 0.0
+            }),id)
+        )).id();
 
         for _ in 0..10 {
             commands.spawn((

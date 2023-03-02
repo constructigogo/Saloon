@@ -1,7 +1,10 @@
 use std::cmp::max;
+
 use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::MouseMotion}, prelude::*};
 use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy_mod_picking::PickingCameraBundle;
+
+use crate::space::galaxy::RenderSystemEvent;
 
 use super::settings::{GameplaySettings, InputSettings};
 
@@ -17,6 +20,7 @@ impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup);
         app.add_system(camera_input);
+        app.add_system(camera_system_view);
     }
 }
 
@@ -50,8 +54,8 @@ fn camera_input(time: Res<Time>,
             for ev in scroll_evr.iter() {
                 match ev.unit {
                     MouseScrollUnit::Line => {
-                        camera_zoom.0 = f64::max((camera_zoom.0+(ev.y/5.0) as f64),0.0) ;
-                        println!("scale {:?}", camera_zoom.0.exp());
+                        camera_zoom.0 = f64::max((camera_zoom.0 + (ev.y / 5.0) as f64), 0.0).min(23.0);
+                        println!("scale {:?}/{:?}", camera_zoom.0, camera_zoom.0.exp());
                     }
                     MouseScrollUnit::Pixel => {
                         println!("Scroll (pixel units): vertical: {}, horizontal: {}", ev.y, ev.x);
@@ -109,5 +113,13 @@ fn camera_input(time: Res<Time>,
             tr.translation += dir * 512.0 * time.delta_seconds()
         }
         Err(_) => {}
+    }
+}
+
+fn camera_system_view(ev: EventReader<RenderSystemEvent>,
+                      mut zoom: ResMut<CameraZoom>,
+) {
+    if !ev.is_empty() {
+        zoom.0 = 23.0;
     }
 }

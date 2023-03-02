@@ -11,9 +11,11 @@ pub mod pilot;
 pub mod galaxy;
 pub mod project;
 pub mod station;
+pub mod anomalies;
+pub mod asteroid;
+pub mod celestial;
 
 pub struct SpaceGamePlugins;
-
 impl PluginGroup for SpaceGamePlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
@@ -50,6 +52,13 @@ impl Plugin for ShipPlugins {
         app
             .add_system(compute_ship_forces)
             .add_system(undock_pilot_system);
+    }
+}
+
+pub struct AnomPlugins;
+impl Plugin for AnomPlugins {
+    fn build(&self, app: &mut App) {
+        //app.add_system();
     }
 }
 

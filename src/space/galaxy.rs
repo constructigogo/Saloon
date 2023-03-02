@@ -2,6 +2,12 @@ use bevy::{ecs::{entity::Entities, query}, prelude::*};
 use bevy::math::DVec3;
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickingCameraBundle, PickingEvent};
 
+
+pub fn to_system(from : f64) -> f64{
+    return from * 0.000001;
+}
+
+
 /// Since we need every ship to be able to live in a different system/map
 /// we need to simulate them independently of the rendering, all in local space
 /// but without interfering with each others (ships in system A should not see ships in system B)
@@ -42,21 +48,17 @@ pub struct GateDestination(pub Entity);
 pub struct GalaxyGateTag;
 
 
-#[derive(Component)]
-pub struct AnomalyMining;
 
-#[derive(Component)]
-pub struct AnomalyCombat;
-
+#[derive(Bundle)]
+pub struct DisplayableGalaxyEntityBundle {
+    pub display : SpriteBundle,
+    pub galaxy : GalaxyEntityBundle
+}
 
 #[derive(Bundle)]
 pub struct GalaxyEntityBundle {
     pub galaxy_coord: GalaxyCoordinate,
     pub simulation_position : SimPosition,
-    pub local_transform: Transform,
-    pub global_transform: GlobalTransform,
-    pub visibility: Visibility,
-    pub computed_visibility: ComputedVisibility,
 }
 
 
@@ -124,7 +126,7 @@ pub fn click_enter_system_view(
 pub struct RenderSystemEvent(Entity);
 
 pub fn flag_render_solar_system(mut commands: Commands,
-                                query_future: Query<(Entity, &GalaxyCoordinate), Without<Rendered>>,
+                                query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>,With<Transform>)>,
                                 mut ev_render: EventReader<RenderSystemEvent>,
                                 mut state: ResMut<State<ViewState>>) {
     if !ev_render.is_empty() {
