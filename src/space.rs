@@ -1,7 +1,10 @@
 use bevy::app::{App, PluginGroupBuilder};
 use bevy::prelude::*;
 use bevy::prelude::system_adapter::new;
+
+use crate::space::inventory::debug_items;
 use crate::space::project::project_to_camera;
+use crate::transfer_item;
 
 use self::galaxy::*;
 use self::ship::*;
@@ -14,17 +17,21 @@ pub mod station;
 pub mod anomalies;
 pub mod asteroid;
 pub mod celestial;
+pub mod inventory;
 
 pub struct SpaceGamePlugins;
+
 impl PluginGroup for SpaceGamePlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(GalaxyPlugin)
             .add(ShipPlugins)
+            .add(InventoryPlugins)
     }
 }
 
 pub struct GalaxyPlugin;
+
 impl Plugin for GalaxyPlugin {
     fn build(&self, app: &mut App) {
         app
@@ -47,6 +54,7 @@ impl Plugin for GalaxyPlugin {
 }
 
 pub struct ShipPlugins;
+
 impl Plugin for ShipPlugins {
     fn build(&self, app: &mut App) {
         app
@@ -56,9 +64,19 @@ impl Plugin for ShipPlugins {
 }
 
 pub struct AnomPlugins;
+
 impl Plugin for AnomPlugins {
     fn build(&self, app: &mut App) {
         //app.add_system();
+    }
+}
+
+pub struct InventoryPlugins;
+
+impl Plugin for InventoryPlugins {
+    fn build(&self, app: &mut App) {
+        app.add_system(transfer_item)
+            .add_system(debug_items);
     }
 }
 

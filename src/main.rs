@@ -18,6 +18,7 @@ use crate::base::timer::*;
 use crate::DestoType::TEntity;
 use crate::space::anomalies::spawn_anom;
 use crate::space::galaxy::{Rendered, SimPosition, to_system};
+use crate::space::inventory::{Inventory, ItemType, spawn_item, transfer_item, TransferItemOrder};
 use crate::space::ship::*;
 use crate::space::station::{AnchorableBundle, spawn_station_at};
 
@@ -103,7 +104,7 @@ fn setup(
             UndockLoc,
         )).id();
 
-        let far = commands.spawn((
+        let mid = commands.spawn((
             spawn_station_at(SimPosition(DVec3 {
                 x: 150000.0,
                 y: 0.0,
@@ -122,18 +123,51 @@ fn setup(
         )).id();
 
         let anom = commands.spawn((
-            spawn_anom(SimPosition(DVec3{
+            spawn_anom(SimPosition(DVec3 {
                 x: to_system(400.0),
                 y: to_system(400.0),
-                z: 0.0
-            }),id)
+                z: 0.0,
+            }), id)
         )).id();
 
-        for _ in 0..10 {
-            commands.spawn((
+        let first = commands.spawn((
+            spawn_new_pilot(),
+            UndockingFrom(station),
+        )).id();
+
+        let mut vec_inv : Vec<Entity> = Vec::new();
+
+        let first_inv = commands.spawn((
+            Inventory{
+                owner: first,
+                location: first,
+                container: vec_inv,
+                max_volume: None
+            }
+        )).id();
+
+        for _ in 0..2 {
+            let ship = commands.spawn((
                 spawn_new_pilot(),
                 UndockingFrom(station),
-            ));
+            )).id();
+
+            let inv = commands.spawn((
+                Inventory{
+                    owner: ship,
+                    location: ship,
+                    container: Vec::new(),
+                    max_volume: None
+                }
+            )).id();
+
+            for _ in 0..1 {
+                let item_id = commands.spawn((
+                    spawn_item(ship),
+                    TransferItemOrder{ from: inv, to: first_inv }
+                )).id();
+                //vec_inv.push(item_id);
+            }
         }
     }
 
