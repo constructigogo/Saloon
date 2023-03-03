@@ -122,8 +122,16 @@ pub fn transfer_item(
                         commands.entity(entity).despawn();
                     }
                     Some(val_left) => {
-                        item_mut.volume -= val_left;
-                        item_in_inv.volume += val_left;
+                        println!("can add {:?}, need {:?}", val_left, vol);
+                        if val_left >= vol {
+                            //item_mut.volume -= vol;
+                            item_in_inv.volume += vol;
+                            commands.entity(entity).despawn();
+                        } else {
+                            let diff :f32 = vol-val_left;
+                            item_mut.volume -= diff;
+                            item_in_inv.volume += diff;
+                        }
                     }
                 }
             }

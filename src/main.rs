@@ -142,7 +142,7 @@ fn setup(
                 owner: first,
                 location: first,
                 container: vec_inv,
-                max_volume: Some(4.0)
+                max_volume: Some(15.0)
             }
         )).id();
 
