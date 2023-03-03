@@ -65,7 +65,7 @@ fn setup(
     mut cluster: ResMut<SystemMap>,
 ) {
     let mut rng = thread_rng();
-    for i in 0..3 {
+    for i in 0..1 {
         let id = commands.spawn(
             (
                 SolarSystem {
@@ -142,7 +142,7 @@ fn setup(
                 owner: first,
                 location: first,
                 container: vec_inv,
-                max_volume: None
+                max_volume: Some(4.0)
             }
         )).id();
 
@@ -157,13 +157,13 @@ fn setup(
                     owner: ship,
                     location: ship,
                     container: Vec::new(),
-                    max_volume: None
+                    max_volume: Some(50.0)
                 }
             )).id();
 
             for _ in 0..1 {
                 let item_id = commands.spawn((
-                    spawn_item(ship),
+                    spawn_item(ship, ItemType::ORE, 10.0),
                     TransferItemOrder{ from: inv, to: first_inv }
                 )).id();
                 //vec_inv.push(item_id);
