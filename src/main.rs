@@ -65,7 +65,7 @@ fn setup(
     mut cluster: ResMut<SystemMap>,
 ) {
     let mut rng = thread_rng();
-    for i in 0..1 {
+    for i in 0..3 {
         let id = commands.spawn(
             (
                 SolarSystem {

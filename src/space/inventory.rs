@@ -81,26 +81,26 @@ pub fn transfer_item(
             None => {
                 let [mut item_mut] = check_inv.many_mut([entity]);
 
-                println!("not found, entity is {:?}", inv_to.owner);
+                //println!("not found, entity is {:?}", inv_to.owner);
                 match empty_space {
                     None => {
-                        println!("no inv limit");
+                        //println!("no inv limit");
                         inv_from.container.retain(|&x| x != entity);
                         inv_to.container.push(entity);
                     }
                     Some(val_left) => {
-                        println!("available space : {:?}", val_left);
+                        //println!("available space : {:?}", val_left);
                         if val_left >= vol {
-                            println!("Enough space");
+                            //println!("Enough space");
                             inv_from.container.retain(|&x| x != entity);
                             inv_to.container.push(entity);
                         } else {
-                            println!("not enough space, need {:?}, have {:?}", vol, val_left);
+                            //println!("not enough space, need {:?}, have {:?}", vol, val_left);
                             item_mut.volume = val_left;
                             inv_from.container.retain(|&x| x != entity);
                             inv_to.container.push(entity);
 
-
+                            //println!("generating new item for {:?}",order.from);
                             //commands.entity(entity).despawn();
                             let new_item_from = commands.spawn((
                                 spawn_item(inv_from.owner, item_mut._type.clone(), vol - val_left),
@@ -112,7 +112,7 @@ pub fn transfer_item(
                 }
             }
             Some(ent) => {
-                println!("found in inv");
+                //println!("found in inv");
                 let local_vol = vol;
                 let [mut item_mut, mut item_in_inv] = check_inv.many_mut([entity, ent]);
 
@@ -122,7 +122,7 @@ pub fn transfer_item(
                         commands.entity(entity).despawn();
                     }
                     Some(val_left) => {
-                        println!("can add {:?}, need {:?}", val_left, vol);
+                        //println!("can add {:?}, need {:?}", val_left, vol);
                         if val_left >= vol {
                             //item_mut.volume -= vol;
                             item_in_inv.volume += vol;
@@ -179,7 +179,7 @@ pub fn debug_items(
             println!("{:?} type {:?}, vol {:?},", ent, item._type, item.volume)
         }
         for item in inv_q.iter() {
-            println!("{:?} {:?}", item.owner, item.container);
+            println!("{:?} {:?} {:?}", item.owner, item.location, item.container);
         }
     }
 }
