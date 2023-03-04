@@ -1,8 +1,10 @@
 use std::time::Duration;
 use bevy::{ecs::{entity::Entities, query}, prelude::*};
-use crate::{GalaxyCoordinate, SimPosition};
+use crate::{GalaxyCoordinate, SimPosition, SolarSystem};
 use crate::space::galaxy::{DisplayableGalaxyEntityBundle, GalaxyEntityBundle};
 
+#[derive(Component)]
+pub struct RegisterTo(pub Entity);
 
 #[derive(Component)]
 pub struct AnomalyMining;
@@ -49,5 +51,15 @@ pub fn spawn_anom(at : SimPosition, galaxy : Entity) -> AnomalyBundle {
                 simulation_position: at
             },
         }
+    }
+}
+
+fn register_anom(
+    anom : Query<(Entity, &RegisterTo)>,
+    mut system : Query<&mut SolarSystem>,
+){
+    for (id, order) in anom.iter() {
+        let mut sys = system.get_mut(order.0).unwrap();
+        sys.anomalies.push(id);
     }
 }

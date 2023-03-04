@@ -55,7 +55,7 @@ fn camera_input(time: Res<Time>,
                 match ev.unit {
                     MouseScrollUnit::Line => {
                         camera_zoom.0 = f64::max((camera_zoom.0 + (ev.y / 5.0) as f64), 0.0).min(23.0);
-                        println!("scale {:?}/{:?}", camera_zoom.0, camera_zoom.0.exp());
+                        //println!("scale {:?}/{:?}", camera_zoom.0, camera_zoom.0.exp());
                     }
                     MouseScrollUnit::Pixel => {
                         println!("Scroll (pixel units): vertical: {}, horizontal: {}", ev.y, ev.x);

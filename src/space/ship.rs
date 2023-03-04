@@ -41,10 +41,14 @@ pub fn compute_ship_forces(
 
             match desto_type {
                 DestoType::DPosition(dPos) => {
+                    //println!("desto : {:?}",dPos);
+
                     dist = (*dPos - sPos.0.truncate()).length() / 0.000001;
                     thrust_dir = Some((*dPos - sPos.0.truncate()).normalize());
                 }
                 DestoType::TEntity(dPos) => {
+                    //println!("desto : {:?}",dPos.0.truncate());
+
                     dist = (dPos.0.truncate() - sPos.0.truncate()).length() / 0.000001;
                     thrust_dir = Some((dPos.0.truncate() - sPos.0.truncate()).normalize());
                 }
@@ -70,7 +74,6 @@ pub fn compute_ship_forces(
                             dir * accel
                         )) * time.delta_seconds_f64();
                     }
-
                     //println!("vel  = {:?}, accel = {:?}, drag = {:?}, dist = {:?}, value = {:?}", amplitude, accel, drag.length(),dist, 0.0);
                 }
             }

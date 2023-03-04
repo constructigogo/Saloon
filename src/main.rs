@@ -4,19 +4,23 @@ use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
 use bevy::math::DVec3;
 use bevy::prelude::*;
+use big_brain::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy_editor_pls::prelude::*;
 use bevy_mod_picking::*;
+use big_brain::BigBrainStage::Thinkers;
 use rand::{Rng, thread_rng};
 
 use space::galaxy::{GalaxyCoordinate, SolarSystem, SystemMap};
 use space::ship::pilot::*;
 use space::SpaceGamePlugins;
+use crate::AI::{AIPlugins};
+use crate::AI::miner::{Mine, MoveToAnom};
 
 use crate::base::*;
 use crate::base::timer::*;
 use crate::DestoType::TEntity;
-use crate::space::anomalies::spawn_anom;
+use crate::space::anomalies::{AnomalyMining, RegisterTo, spawn_anom};
 use crate::space::galaxy::{Rendered, SimPosition, to_system};
 use crate::space::inventory::{Inventory, ItemType, spawn_item, transfer_item, TransferItemOrder};
 use crate::space::ship::*;
@@ -24,16 +28,19 @@ use crate::space::station::{AnchorableBundle, spawn_station_at};
 
 pub mod base;
 pub mod space;
+pub mod AI;
 
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(BigBrainPlugin)
         .add_plugin(EditorPlugin)
         .add_plugins(DefaultPickingPlugins)
         .add_plugin(DebugEventsPickingPlugin)
         .add_plugins(BaseLogicPlugins)
         .add_plugins(SpaceGamePlugins)
+        .add_plugins(AIPlugins)
         .add_plugin(TimerPlugin)
         .add_startup_system(setup)
         //.add_system(frame_update)
@@ -65,7 +72,7 @@ fn setup(
     mut cluster: ResMut<SystemMap>,
 ) {
     let mut rng = thread_rng();
-    for i in 0..3 {
+    for i in 0..1 {
         let id = commands.spawn(
             (
                 SolarSystem {
@@ -127,8 +134,21 @@ fn setup(
                 x: to_system(400.0),
                 y: to_system(400.0),
                 z: 0.0,
-            }), id)
+            }), id),
+            AnomalyMining,
+            RegisterTo(id),
         )).id();
+
+        let anom_inv = commands.spawn((
+            Inventory{
+                owner: anom,
+                location: anom,
+                container: Vec::new(),
+                max_volume: None
+            }
+        )).id();
+
+
 
         let first = commands.spawn((
             spawn_new_pilot(),
@@ -146,10 +166,24 @@ fn setup(
             }
         )).id();
 
+        for asteroid in 0..3 {
+            let item_id = commands.spawn((
+                spawn_item(anom_inv, ItemType::ORE, 500.0),
+                TransferItemOrder{ from: first_inv, to: anom_inv }
+            )).id();
+        }
+
         for _ in 0..2 {
             let ship = commands.spawn((
                 spawn_new_pilot(),
                 UndockingFrom(station),
+                Thinker::build()
+                    .label("mine")
+                    .picker(FirstToScore { threshold: 0.8 })
+                    .when(
+                        Mine,
+                        MoveToAnom
+                    )
             )).id();
 
             let inv = commands.spawn((
