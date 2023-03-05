@@ -2,11 +2,16 @@ use bevy::math::DVec2;
 use bevy::prelude::*;
 use big_brain::prelude::*;
 
-use crate::{Destination, DestoType, GalaxyCoordinate, SimPosition, to_system};
+use crate::{Destination, DestoType, GalaxyCoordinate, Inventory, SimPosition, to_system};
 use crate::space::anomalies::AnomalyMining;
+use crate::space::asteroid::AsteroidTag;
+use crate::space::galaxy::around_pos;
 
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct MoveToAnom;
+
+#[derive(Clone, Component, Debug, ActionBuilder)]
+pub struct MineAnom;
 
 #[derive(Clone, Component, Debug, ScorerBuilder)]
 pub struct Mine;
@@ -23,23 +28,25 @@ pub fn move_to_anom_system(
                 let closest = get_closest_anom_pos(
                     coord,
                     pos,
-                    &anoms
+                    &anoms,
                 );
-                if  (pos.0.truncate() - closest.truncate()).length() > 0.00005{
-                    *desto = Destination(DestoType::DPosition(closest.0.truncate()));
-                    println!("action on {:?}, from {:?}, setting desto to {:?}",actor, pos.0.truncate(),closest.0.truncate());
+                if (pos.0.truncate() - closest.truncate()).length() > 0.00005 {
+                    *desto = Destination(
+                        DestoType::DPosition(around_pos(closest,15.0))
+                    );
+                    //println!("action on {:?}, from {:?}, setting desto to {:?}",actor, pos.0.truncate(),closest.0.truncate());
                     *state = ActionState::Executing;
                 }
             }
             ActionState::Executing => {
                 match desto.0 {
-                    DestoType::DPosition(id)=> {
-                        if (pos.0.truncate() - id).length() < 0.00005{
+                    DestoType::DPosition(id) => {
+                        if (pos.0.truncate() - id.0.truncate()).length() < 0.00005 {
                             //*state = ActionState::Success;
                         }
                     }
                     DestoType::TEntity(id) => {
-                        if (pos.0 - id.0).length() < to_system(30.0){
+                        if (pos.0 - id.0).length() < to_system(30.0) {
                             //*state = ActionState::Success;
                         }
                     }
@@ -55,16 +62,22 @@ pub fn move_to_anom_system(
     }
 }
 
+pub fn mine_anom_system(
+    mut ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &mut Destination)>,
+    anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining)>,
+    inventories: Query<(Entity, &Inventory)>,
+    mut action: Query<(&Actor, &MineAnom, &mut ActionState)>,
+) {}
+
 pub fn mine_scorer_system(
+    anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining)>,
+    asteroids: Query<(Entity, &SimPosition), (With<AsteroidTag>)>,
     mut query: Query<(&Actor, &mut Score), With<Mine>>,
-){
-    for (Actor(actor),mut score) in query.iter_mut() {
+) {
+    for (Actor(actor), mut score) in query.iter_mut() {
         score.set(1.0);
     }
 }
-
-
-
 
 
 fn get_closest_anom_pos(

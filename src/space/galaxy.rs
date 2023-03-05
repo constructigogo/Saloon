@@ -1,12 +1,23 @@
+use std::f64::consts::PI;
+use std::ops::Range;
+
 use bevy::{ecs::{entity::Entities, query}, prelude::*};
 use bevy::math::DVec3;
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickingCameraBundle, PickingEvent};
+use rand::{Rng, thread_rng};
+use rand::rngs::ThreadRng;
 
-
-pub fn to_system(from : f64) -> f64{
+pub fn to_system(from: f64) -> f64 {
     return from * 0.000001;
 }
 
+pub fn around_pos(pos: SimPosition, radius: f64) -> SimPosition {
+    let rng = thread_rng().gen::<f64>() * 2.0 * PI;
+    let rad = thread_rng().gen_range::<f64, Range<f64>>(0.0..radius);
+    println!("{:?}", rad);
+    let n_pos = pos.0 + ((DVec3::new(f64::cos(rng), f64::sin(rng), 0.0)) * to_system(rad));
+    return SimPosition(n_pos);
+}
 
 /// Since we need every ship to be able to live in a different system/map
 /// we need to simulate them independently of the rendering, all in local space
@@ -48,17 +59,16 @@ pub struct GateDestination(pub Entity);
 pub struct GalaxyGateTag;
 
 
-
 #[derive(Bundle)]
 pub struct DisplayableGalaxyEntityBundle {
-    pub display : SpriteBundle,
-    pub galaxy : GalaxyEntityBundle
+    pub display: SpriteBundle,
+    pub galaxy: GalaxyEntityBundle,
 }
 
 #[derive(Bundle)]
 pub struct GalaxyEntityBundle {
     pub galaxy_coord: GalaxyCoordinate,
-    pub simulation_position : SimPosition,
+    pub simulation_position: SimPosition,
 }
 
 
@@ -95,7 +105,6 @@ pub fn exit_system_view(
             ev_hide.send(HideSystemEvent);
             ev.send(RenderGalaxyEvent);
             state.set(ViewState::GALAXY);
-
         }
     }
 }
@@ -126,7 +135,7 @@ pub fn click_enter_system_view(
 pub struct RenderSystemEvent(Entity);
 
 pub fn flag_render_solar_system(mut commands: Commands,
-                                query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>,With<Transform>)>,
+                                query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>, With<Transform>)>,
                                 mut ev_render: EventReader<RenderSystemEvent>,
                                 mut state: ResMut<State<ViewState>>) {
     if !ev_render.is_empty() {

@@ -4,23 +4,24 @@ use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
 use bevy::math::DVec3;
 use bevy::prelude::*;
-use big_brain::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy_editor_pls::prelude::*;
 use bevy_mod_picking::*;
 use big_brain::BigBrainStage::Thinkers;
+use big_brain::prelude::*;
 use rand::{Rng, thread_rng};
 
 use space::galaxy::{GalaxyCoordinate, SolarSystem, SystemMap};
 use space::ship::pilot::*;
 use space::SpaceGamePlugins;
-use crate::AI::{AIPlugins};
-use crate::AI::miner::{Mine, MoveToAnom};
 
+use crate::AI::AIPlugins;
+use crate::AI::miner::{Mine, MineAnom, MoveToAnom};
 use crate::base::*;
 use crate::base::timer::*;
 use crate::DestoType::TEntity;
-use crate::space::anomalies::{AnomalyMining, RegisterTo, spawn_anom};
+use crate::space::anomalies::{AnomalyInit, AnomalyMining, RegisterTo, spawn_anom};
+use crate::space::asteroid::{RessourceWell, spawn_asteroid};
 use crate::space::galaxy::{Rendered, SimPosition, to_system};
 use crate::space::inventory::{Inventory, ItemType, spawn_item, transfer_item, TransferItemOrder};
 use crate::space::ship::*;
@@ -135,19 +136,28 @@ fn setup(
                 y: to_system(400.0),
                 z: 0.0,
             }), id),
-            AnomalyMining,
+            AnomalyMining { tracked: Vec::new() },
+            RegisterTo(id),
+        )).id();
+
+        let anom2 = commands.spawn((
+            spawn_anom(SimPosition(DVec3 {
+                x: to_system(-400.0),
+                y: to_system(-400.0),
+                z: 0.0,
+            }), id),
+            AnomalyMining { tracked: Vec::new() },
             RegisterTo(id),
         )).id();
 
         let anom_inv = commands.spawn((
-            Inventory{
+            Inventory {
                 owner: anom,
                 location: anom,
                 container: Vec::new(),
-                max_volume: None
+                max_volume: None,
             }
         )).id();
-
 
 
         let first = commands.spawn((
@@ -155,25 +165,26 @@ fn setup(
             UndockingFrom(station),
         )).id();
 
-        let mut vec_inv : Vec<Entity> = Vec::new();
+        let mut vec_inv: Vec<Entity> = Vec::new();
 
         let first_inv = commands.spawn((
-            Inventory{
+            Inventory {
                 owner: first,
                 location: first,
                 container: vec_inv,
-                max_volume: Some(15.0)
+                max_volume: Some(15.0),
             }
         )).id();
 
-        for asteroid in 0..3 {
-            let item_id = commands.spawn((
-                spawn_item(anom_inv, ItemType::ORE, 500.0),
-                TransferItemOrder{ from: first_inv, to: anom_inv }
-            )).id();
-        }
 
-        for _ in 0..2 {
+
+        for _ in 0..8 {
+            let mine_in_anom = Steps::build()
+                .label("MineInAnom")
+                .step(MoveToAnom)
+                .step(MineAnom);
+
+
             let ship = commands.spawn((
                 spawn_new_pilot(),
                 UndockingFrom(station),
@@ -182,23 +193,23 @@ fn setup(
                     .picker(FirstToScore { threshold: 0.8 })
                     .when(
                         Mine,
-                        MoveToAnom
+                        MoveToAnom,
                     )
             )).id();
 
             let inv = commands.spawn((
-                Inventory{
+                Inventory {
                     owner: ship,
                     location: ship,
                     container: Vec::new(),
-                    max_volume: Some(50.0)
+                    max_volume: Some(50.0),
                 }
             )).id();
 
             for _ in 0..1 {
                 let item_id = commands.spawn((
                     spawn_item(ship, ItemType::ORE, 10.0),
-                    TransferItemOrder{ from: inv, to: first_inv }
+                    TransferItemOrder { from: inv, to: first_inv }
                 )).id();
                 //vec_inv.push(item_id);
             }

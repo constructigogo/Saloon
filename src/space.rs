@@ -1,6 +1,8 @@
 use bevy::app::{App, PluginGroupBuilder};
 use bevy::prelude::*;
 use bevy::prelude::system_adapter::new;
+use bevy::utils::tracing::callsite::register;
+use crate::space::anomalies::*;
 
 use crate::space::inventory::debug_items;
 use crate::space::project::project_to_camera;
@@ -8,6 +10,7 @@ use crate::transfer_item;
 
 use self::galaxy::*;
 use self::ship::*;
+use self::weapon::*;
 
 pub mod ship;
 pub mod pilot;
@@ -18,6 +21,7 @@ pub mod anomalies;
 pub mod asteroid;
 pub mod celestial;
 pub mod inventory;
+pub mod weapon;
 
 pub struct SpaceGamePlugins;
 
@@ -25,6 +29,7 @@ impl PluginGroup for SpaceGamePlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(GalaxyPlugin)
+            .add(AnomPlugins)
             .add(ShipPlugins)
             .add(InventoryPlugins)
     }
@@ -67,7 +72,8 @@ pub struct AnomPlugins;
 
 impl Plugin for AnomPlugins {
     fn build(&self, app: &mut App) {
-        //app.add_system();
+        app.add_system(register_anom);
+        app.add_system(init_anom);
     }
 }
 
@@ -77,6 +83,15 @@ impl Plugin for InventoryPlugins {
     fn build(&self, app: &mut App) {
         app.add_system(transfer_item)
             .add_system(debug_items);
+    }
+}
+
+
+pub struct WeaponPlugins;
+
+impl Plugin for WeaponPlugins {
+    fn build(&self, app: &mut App) {
+        app.add_system(weapon_range_checker_system);
     }
 }
 

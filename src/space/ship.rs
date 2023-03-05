@@ -43,8 +43,8 @@ pub fn compute_ship_forces(
                 DestoType::DPosition(dPos) => {
                     //println!("desto : {:?}",dPos);
 
-                    dist = (*dPos - sPos.0.truncate()).length() / 0.000001;
-                    thrust_dir = Some((*dPos - sPos.0.truncate()).normalize());
+                    dist = (dPos.0.truncate() - sPos.0.truncate()).length() / 0.000001;
+                    thrust_dir = Some((dPos.0.truncate() - sPos.0.truncate()).normalize());
                 }
                 DestoType::TEntity(dPos) => {
                     //println!("desto : {:?}",dPos.0.truncate());
@@ -105,7 +105,7 @@ pub struct UndockLoc;
 pub fn undock_pilot_system(
     mut commands: Commands,
     query: Query<(Entity, &UndockingFrom)>,
-    undocks: Query<(&SimPosition,&GalaxyCoordinate) , With<UndockLoc>>) {
+    undocks: Query<(&SimPosition, &GalaxyCoordinate), With<UndockLoc>>) {
     let mut rng = thread_rng();
     for (entity, from) in query.iter() {
         if let Ok(trans) = undocks.get(commands.entity(from.0).id()) {
@@ -134,14 +134,15 @@ pub fn undock_pilot_system(
                             thrust: 100000000,
                             angular: 25.15,
                         },
-                        move_towards: Destination(DestoType::DPosition(DVec2 {
+                        move_towards: Destination(DestoType::DPosition(SimPosition(DVec3 {
                             x: rng.gen_range(-0.0002..0.0002),
                             y: rng.gen_range(-0.00015..0.00015),
-                        })),
+                            z: 0.0,
+                        }))),
                     },
                 }
             ).remove::<UndockingFrom>();
-        } else {println!("invalid pos")}
+        } else { println!("invalid pos") }
     }
 }
 
@@ -215,7 +216,7 @@ pub struct Health {
 
 #[derive(Default)]
 pub enum DestoType {
-    DPosition(DVec2),
+    DPosition(SimPosition),
     TEntity(SimPosition),
     #[default]
     None,
