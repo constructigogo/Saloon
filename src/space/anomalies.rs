@@ -1,8 +1,11 @@
+use std::process::id;
 use std::time::Duration;
 
 use bevy::{ecs::{entity::Entities, query}, prelude::*};
+use bevy::ecs::query::QueryEntityError;
 
 use crate::{DVec3, GalaxyCoordinate, ItemType, RessourceWell, SimPosition, SolarSystem, spawn_asteroid, to_system};
+use crate::space::asteroid::AsteroidTag;
 use crate::space::galaxy::{DisplayableGalaxyEntityBundle, GalaxyEntityBundle};
 
 
@@ -84,16 +87,35 @@ pub fn init_anom(
         for _ in 0..5*anom.level {
             let roid = command.spawn((
                 spawn_asteroid(pos.clone(), galaxy.0),
-                RessourceWell {
-                    _type: ItemType::ORE,
-                    volume: 500.0,
-                }
             )).id();
             mining.tracked.push(roid);
         }
         command.entity(id).remove::<AnomalyInit>();
     }
 }
+
+pub fn mining_anomaly_lifecycle_system(
+    mut commands : Commands,
+    anomalies : Query<(Entity, &AnomalyMining), Without<AnomalyInit>>,
+    asteroids : Query<(Entity),(With<AsteroidTag>)>
+){
+    for (id,anom) in anomalies.iter() {
+        let mut reset = true;
+        for asteroid in anom.tracked.iter() {
+            let as_ref = asteroids.get(*asteroid);
+            match as_ref {
+                Ok(_) => {
+                    reset = false;
+                }
+                Err(_) => {}
+            }
+        }
+        if reset {
+            commands.entity(id).insert(AnomalyInit);
+        }
+    }
+}
+
 
 pub fn register_anom(
     mut command: Commands,

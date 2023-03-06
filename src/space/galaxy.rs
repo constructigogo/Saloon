@@ -1,7 +1,9 @@
 use std::f64::consts::PI;
 use std::ops::Range;
+use std::thread::current;
 
 use bevy::{ecs::{entity::Entities, query}, prelude::*};
+use bevy::ecs::system::lifetimeless::SCommands;
 use bevy::math::DVec3;
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickingCameraBundle, PickingEvent};
 use rand::{Rng, thread_rng};
@@ -14,7 +16,6 @@ pub fn to_system(from: f64) -> f64 {
 pub fn around_pos(pos: SimPosition, radius: f64) -> SimPosition {
     let rng = thread_rng().gen::<f64>() * 2.0 * PI;
     let rad = thread_rng().gen_range::<f64, Range<f64>>(0.0..radius);
-    println!("{:?}", rad);
     let n_pos = pos.0 + ((DVec3::new(f64::cos(rng), f64::sin(rng), 0.0)) * to_system(rad));
     return SimPosition(n_pos);
 }
@@ -87,6 +88,9 @@ pub enum ViewState {
     EMPTY,
 }
 
+#[derive(Resource)]
+pub struct CurrentSystemDisplay(pub Option<Entity>);
+
 pub struct HideSystemEvent;
 
 pub struct HideGalaxyEvent;
@@ -134,10 +138,13 @@ pub fn click_enter_system_view(
 
 pub struct RenderSystemEvent(Entity);
 
-pub fn flag_render_solar_system(mut commands: Commands,
-                                query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>, With<Transform>)>,
-                                mut ev_render: EventReader<RenderSystemEvent>,
-                                mut state: ResMut<State<ViewState>>) {
+pub fn flag_render_solar_system(
+    mut commands: Commands,
+    mut current: ResMut<CurrentSystemDisplay>,
+    query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>, With<Transform>)>,
+    mut ev_render: EventReader<RenderSystemEvent>,
+    mut state: ResMut<State<ViewState>>,
+) {
     if !ev_render.is_empty() {
         let sys = ev_render.iter().next();
         match sys {
@@ -149,6 +156,7 @@ pub fn flag_render_solar_system(mut commands: Commands,
                     }
                 }
                 println!("render map {:?}", val.0);
+                current.0 = Some(val.0);
             }
             None => {}
         }
@@ -206,6 +214,22 @@ pub fn generate_system_view(mut commands: Commands,
     }
 }
 
+pub fn add_to_system_view(
+    mut commands : Commands,
+    current: Res<CurrentSystemDisplay>,
+    query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>, Without<RenderFlag>, Added<Transform>)>,
+) {
+    match current.0 {
+        None => {}
+        Some(system) => {
+            for (id, galaxy) in query_future.iter() {
+                if galaxy.0 == system {
+                    commands.entity(id).insert((RenderFlag));
+                }
+            }
+        }
+    }
+}
 
 /*
 #[derive(Bundle)]

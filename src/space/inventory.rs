@@ -1,7 +1,21 @@
 use std::borrow::{Borrow, BorrowMut};
 use std::io::empty;
+use std::process::id;
+use std::thread::spawn;
 
+use bevy::ecs::query;
+use bevy::ecs::query::QueryEntityError;
+use bevy::ecs::system::Command;
 use bevy::prelude::*;
+use bevy::utils::tracing::callsite::register;
+
+#[derive(Component)]
+pub struct OnboardInventory(pub Entity);
+
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+pub struct RegisterInventoryToShip(pub Entity);
+
 
 #[derive(Component)]
 pub struct Inventory {
@@ -9,7 +23,13 @@ pub struct Inventory {
     pub location: Entity,
     pub container: Vec<Entity>,
     pub max_volume: Option<f32>,
+    pub cached_current_volume: f32,
 }
+
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+pub struct UpdateCachedVolume;
+
 
 #[derive(Component)]
 pub struct Item {
@@ -35,6 +55,25 @@ pub struct ItemBundle {
     pub item: Item,
 }
 
+#[derive(Resource)]
+pub struct WorldInventory(pub Entity);
+
+pub fn setup_world_inventory(
+    mut commands: Commands
+) {
+    let world_inv = commands.spawn_empty().id();
+
+    commands.entity(world_inv).insert(
+        Inventory {
+            owner: world_inv,
+            location: world_inv,
+            container: Vec::new(),
+            max_volume: None,
+            cached_current_volume: 0.0,
+        },
+    );
+    commands.insert_resource(WorldInventory(world_inv));
+}
 
 pub fn spawn_item(target: Entity, __type: ItemType, _volume: f32) -> ItemBundle {
     return ItemBundle {
@@ -44,6 +83,18 @@ pub fn spawn_item(target: Entity, __type: ItemType, _volume: f32) -> ItemBundle 
             volume: _volume,
         },
     };
+}
+
+pub fn register_inventory_to_ship_system(
+    mut commands: Commands,
+    registers: Query<(Entity, &RegisterInventoryToShip)>,
+) {
+    for (id, register) in registers.iter() {
+        println!("init inv for {:?}", register.0);
+        commands.entity(register.0)
+            .insert(OnboardInventory(id));
+        commands.entity(id).remove::<RegisterInventoryToShip>();
+    }
 }
 
 pub fn transfer_item(
@@ -59,13 +110,13 @@ pub fn transfer_item(
         let _type = &item._type;
         let vol: f32 = item.volume;
 
-        let in_inv = is_type_in_inventory(
+        let in_inv = is_type_in_inventory_mut(
             _type,
             &inv_to,
             &check_inv,
         );
 
-        let to_volume: f32 = volume_in_inventory(&inv_to, &check_inv);
+        let to_volume: f32 = volume_in_inventory_mut(&mut inv_to, &check_inv);
 
         let mut empty_space: Option<f32> = None;
 
@@ -128,7 +179,7 @@ pub fn transfer_item(
                             item_in_inv.volume += vol;
                             commands.entity(entity).despawn();
                         } else {
-                            let diff :f32 = vol-val_left;
+                            let diff: f32 = vol - val_left;
                             item_mut.volume -= diff;
                             item_in_inv.volume += diff;
                         }
@@ -136,33 +187,89 @@ pub fn transfer_item(
                 }
             }
         }
+        commands.entity(order.to).insert((UpdateCachedVolume));
+        commands.entity(order.from).insert((UpdateCachedVolume));
         commands.entity(entity).remove::<TransferItemOrder>();
     }
 }
 
-fn volume_in_inventory(inv: &Mut<Inventory>,
-                       query: &Query<(&mut Item)>,
+
+pub fn update_cached_volume_system(
+    mut commands: Commands,
+    mut inventory: Query<(Entity, &mut Inventory), With<UpdateCachedVolume>>,
+    mut check_inv: Query<&mut Item>,
+) {
+    for (id, mut inv) in inventory.iter_mut() {
+        let result = volume_in_inventory_mut(&mut inv, &check_inv);
+        //assert!(Some(inv.max_volume>Some(result));
+        println!("{:?}/{:?}", result, inv.max_volume);
+        inv.cached_current_volume = result;
+        commands.entity(id).remove::<UpdateCachedVolume>();
+    }
+}
+
+
+fn volume_in_inventory_mut(inv: &mut Mut<Inventory>,
+                           query: &Query<(&mut Item)>,
 ) -> f32 {
     let mut total: f32 = 0.0;
+    let mut flagRemove: Vec<Entity> = Vec::new();
     for item in inv.container.iter() {
-        let _itm = query.get(*item).unwrap();
-        total += _itm.volume;
+        let _itm = query.get(*item);
+        match _itm {
+            Ok(itm_id) => {
+                total += itm_id.volume;
+            }
+            Err(_) => {
+                flagRemove.push(*item);
+            }
+        }
     }
+
+    for item in flagRemove {
+        inv.container.retain(|&x| x != item);
+    }
+
     //debug_assert!(inv.max_volume > Some(total));
     return total;
 }
 
 
-fn is_type_in_inventory(
+pub fn is_type_in_inventory(
+    item_type: &ItemType,
+    inv: &Inventory,
+    query: &Query<(&Item)>,
+) -> Option<Entity> {
+    for item in inv.container.iter() {
+        let _itm = query.get(*item);
+        match _itm {
+            Ok(itm_id) => {
+                let _type = &itm_id._type;
+                if *_type == *item_type {
+                    return Some(*item);
+                }
+            }
+            Err(_) => {}
+        }
+    }
+    return None;
+}
+
+pub fn is_type_in_inventory_mut(
     item_type: &ItemType,
     inv: &Mut<Inventory>,
     query: &Query<(&mut Item)>,
 ) -> Option<Entity> {
     for item in inv.container.iter() {
-        let _itm = query.get(*item).unwrap();
-        let _type = &_itm._type;
-        if *_type == *item_type {
-            return Some(*item);
+        let _itm = query.get(*item);
+        match _itm {
+            Ok(itm_id) => {
+                let _type = &itm_id._type;
+                if *_type == *item_type {
+                    return Some(*item);
+                }
+            }
+            Err(_) => {}
         }
     }
     return None;

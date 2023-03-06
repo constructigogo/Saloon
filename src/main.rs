@@ -23,9 +23,10 @@ use crate::DestoType::TEntity;
 use crate::space::anomalies::{AnomalyInit, AnomalyMining, RegisterTo, spawn_anom};
 use crate::space::asteroid::{RessourceWell, spawn_asteroid};
 use crate::space::galaxy::{Rendered, SimPosition, to_system};
-use crate::space::inventory::{Inventory, ItemType, spawn_item, transfer_item, TransferItemOrder};
+use crate::space::inventory::{Inventory, ItemType, RegisterInventoryToShip, spawn_item, transfer_item, TransferItemOrder, UpdateCachedVolume};
 use crate::space::ship::*;
 use crate::space::station::{AnchorableBundle, spawn_station_at};
+use crate::space::weapon::{Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
 
 pub mod base;
 pub mod space;
@@ -156,7 +157,9 @@ fn setup(
                 location: anom,
                 container: Vec::new(),
                 max_volume: None,
-            }
+                cached_current_volume:0.0
+            },
+            UpdateCachedVolume
         )).id();
 
 
@@ -173,12 +176,14 @@ fn setup(
                 location: first,
                 container: vec_inv,
                 max_volume: Some(15.0),
-            }
+                cached_current_volume:0.0
+            },
+            UpdateCachedVolume
         )).id();
 
 
 
-        for _ in 0..8 {
+        for _ in 0..1 {
             let mine_in_anom = Steps::build()
                 .label("MineInAnom")
                 .step(MoveToAnom)
@@ -193,8 +198,19 @@ fn setup(
                     .picker(FirstToScore { threshold: 0.8 })
                     .when(
                         Mine,
-                        MoveToAnom,
-                    )
+                        mine_in_anom,
+                    ),
+                WeaponBundle{
+                    _weapon: Weapon {
+                        _type: WeaponType::Mining,
+                        config: WeaponConfig::RangeShort,
+                        size: WeaponSize::Small,
+                        tier: 1,
+                        bank: 1
+                    },
+                    target: WeaponTarget(None),
+                    in_range: WeaponInRange(false),
+                }
             )).id();
 
             let inv = commands.spawn((
@@ -202,17 +218,12 @@ fn setup(
                     owner: ship,
                     location: ship,
                     container: Vec::new(),
-                    max_volume: Some(50.0),
-                }
+                    max_volume: Some(5000.0),
+                    cached_current_volume:0.0
+                },
+                UpdateCachedVolume,
+                RegisterInventoryToShip(ship)
             )).id();
-
-            for _ in 0..1 {
-                let item_id = commands.spawn((
-                    spawn_item(ship, ItemType::ORE, 10.0),
-                    TransferItemOrder { from: inv, to: first_inv }
-                )).id();
-                //vec_inv.push(item_id);
-            }
         }
     }
 
