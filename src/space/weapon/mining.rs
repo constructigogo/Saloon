@@ -24,7 +24,7 @@ pub fn resource_gathering_system(
                     None => {}
                     Some(target_id) => {
                         let well = wells.get_mut(target_id);
-                        let inv_ref = inventories.get_mut(inv_id.0).expect("Entity should have inventory");
+                        let mut inv_ref = inventories.get_mut(inv_id.0).expect("Entity should have inventory");
 
                         match well {
                             Ok(mut well_ref) => {
@@ -57,15 +57,18 @@ pub fn resource_gathering_system(
                                                     }
                                                 ));
                                                 well_ref.volume -= res_yield;
+                                                inv_ref.cached_current_volume+=res_yield;
                                             }
                                             Some(item_id) => {
                                                 let mut item_ref = items.get_mut(item_id).expect("item should exist");
                                                 item_ref.volume += res_yield;
+                                                inv_ref.cached_current_volume+=res_yield;
                                                 well_ref.volume -= res_yield;
                                             }
                                         }
 
                                         println!("mined {:?} ore, left {:?}",res_yield,well_ref.volume);
+                                        println!("cargo : {:?}/{:?}",inv_ref.cached_current_volume,value);
                                     }
                                 }
                             }

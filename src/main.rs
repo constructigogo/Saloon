@@ -218,7 +218,7 @@ fn setup(
                     owner: ship,
                     location: ship,
                     container: Vec::new(),
-                    max_volume: Some(5000.0),
+                    max_volume: Some(953.6577),
                     cached_current_volume:0.0
                 },
                 UpdateCachedVolume,

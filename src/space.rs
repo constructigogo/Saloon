@@ -79,6 +79,7 @@ pub struct AnomPlugins;
 impl Plugin for AnomPlugins {
     fn build(&self, app: &mut App) {
         app.add_system(register_anom);
+        app.add_system(anomaly_respawn_timer_system);
         app.add_system(init_anom);
         app.add_system(mining_anomaly_lifecycle_system);
     }

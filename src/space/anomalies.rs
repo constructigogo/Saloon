@@ -53,7 +53,7 @@ pub fn spawn_anom(at: SimPosition, galaxy: Entity) -> AnomalyBundle {
         anom : Anomaly{ level: 1 },
         timer: AnomalyRespawnTimer(Timer::new(
             Duration::from_secs(5),
-            TimerMode::Once,
+            TimerMode::Repeating,
         )),
         displayable: DisplayableGalaxyEntityBundle {
             display: SpriteBundle {
@@ -91,12 +91,13 @@ pub fn init_anom(
             mining.tracked.push(roid);
         }
         command.entity(id).remove::<AnomalyInit>();
+        command.entity(id).insert(AnomalyActive);
     }
 }
 
 pub fn mining_anomaly_lifecycle_system(
     mut commands : Commands,
-    anomalies : Query<(Entity, &AnomalyMining), Without<AnomalyInit>>,
+    anomalies : Query<(Entity, &AnomalyMining), (Without<AnomalyInit>,With<AnomalyActive>)>,
     asteroids : Query<(Entity),(With<AsteroidTag>)>
 ){
     for (id,anom) in anomalies.iter() {
@@ -111,11 +112,28 @@ pub fn mining_anomaly_lifecycle_system(
             }
         }
         if reset {
-            commands.entity(id).insert(AnomalyInit);
+            //commands.entity(id).insert(AnomalyInit);
+            println!("anom {:?} is empty, respawning ...", id);
+            commands.entity(id).remove::<AnomalyActive>();
         }
     }
 }
 
+pub fn anomaly_respawn_timer_system(
+    mut commands :Commands,
+    time : Res<Time>,
+    mut anoms : Query<(Entity, &mut AnomalyRespawnTimer), Without<AnomalyActive>>
+){
+    for (id,mut anom) in anoms.iter_mut() {
+        anom.0.tick(time.delta());
+
+        if anom.0.finished() {
+            commands.entity(id).insert(AnomalyInit);
+            anom.0.reset();
+        }
+
+    }
+}
 
 pub fn register_anom(
     mut command: Commands,
