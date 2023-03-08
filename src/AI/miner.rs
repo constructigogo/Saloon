@@ -29,11 +29,67 @@ pub struct DepositOre;
 pub struct Mine;
 
 pub fn move_to_anom_system(
-    mut command: Commands,
-    mut ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &mut Destination)>,
+    mut par_commands: ParallelCommands,
+    ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &mut Destination)>,
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining), With<AnomalyActive>>,
     mut action: Query<(&Actor, &MoveToAnom, &mut ActionState)>,
 ) {
+    action.par_for_each_mut(8,|(Actor(actor), order, mut state) |
+        {
+            let (id, coord, pos, mut desto) = ship.get(*actor).unwrap();
+            match *state {
+                ActionState::Requested => {
+                    let (closest, anom) = get_closest_anom_pos(
+                        coord,
+                        pos,
+                        &anoms,
+                    );
+
+                    match anom {
+                        None => {
+                            //println!("no anom found, failure");
+                            *state = ActionState::Failure;
+                        }
+                        Some(anom_value) => {
+                            par_commands.command_scope(|mut commands| {
+                                commands.entity(id).insert((MiningInAnom(anom_value)));
+                                if (pos.0.truncate() - closest.truncate()).length() > 0.00005 {
+                                    commands.entity(id).insert(Destination(
+                                        DestoType::DPosition(around_pos(closest, 15.0))
+                                    ));
+                                    //println!("action on {:?}, from {:?}, setting desto to {:?}",actor, pos.0.truncate(),closest.0.truncate());
+                                    *state = ActionState::Executing;
+                                }
+                            });
+                        }
+                    }
+                }
+                ActionState::Executing => {
+                    match desto.0 {
+                        DestoType::DPosition(target_pos) => {
+                            if (pos.0.truncate() - target_pos.0.truncate()).length() < to_system(30.0) {
+                                //println!("Success");
+                                *state = ActionState::Success;
+                            }
+                        }
+                        DestoType::TEntity(id) => {
+                            if (pos.0 - id.0).length() < to_system(30.0) {
+                                //println!("Success");
+                                *state = ActionState::Success;
+                            }
+                        }
+                        DestoType::None => {}
+                    }
+                }
+                ActionState::Cancelled => {
+                    *state = ActionState::Failure;
+                }
+                _ => {}
+            }
+        }
+    );
+
+    /*
     for (Actor(actor), order, mut state) in action.iter_mut() {
         let (id, coord, pos, mut desto) = ship.get_mut(*actor).unwrap();
         match *state {
@@ -84,6 +140,7 @@ pub fn move_to_anom_system(
             _ => {}
         }
     }
+         */
 }
 
 pub fn mine_anom_system(
