@@ -30,7 +30,7 @@ pub struct Mine;
 
 pub fn move_to_anom_system(
     mut par_commands: ParallelCommands,
-    ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &mut Destination)>,
+    ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &Destination)>,
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining), With<AnomalyActive>>,
     mut action: Query<(&Actor, &MoveToAnom, &mut ActionState)>,
 ) {
@@ -144,12 +144,75 @@ pub fn move_to_anom_system(
 }
 
 pub fn mine_anom_system(
-    mut ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory, &MiningInAnom, &mut WeaponTarget, &mut Destination)>,
+    mut par_commands :ParallelCommands,
+    ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory, &MiningInAnom, &WeaponTarget, &Destination)>,
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining)>,
     asteroid: Query<(Entity, &SimPosition), With<AsteroidTag>>,
     inventories: Query<&Inventory>,
     mut action: Query<(&Actor, &MineAnom, &mut ActionState)>,
 ) {
+    action.par_for_each_mut(8,|(Actor(actor), order, mut state)|
+        {
+            let (id, coord, pos, inv, anom, mut target, mut desto) = ship.get(*actor).unwrap();
+            match *state {
+                ActionState::Requested => {
+                    let result =
+                        get_closest_asteroid_in_anom(
+                            &pos,
+                            anom.0,
+                            &asteroid,
+                            &anoms);
+
+                    match result.1 {
+                        None => {
+                            //println!("could not find asteroid in anom {:?}", anom.0);
+                            *state = ActionState::Failure;
+                        }
+                        Some(asteroid_id) => {
+
+                            par_commands.command_scope(|mut commands| {
+                                commands.entity(id)
+                                    .insert(WeaponTarget(Some(asteroid_id)))
+                                    .insert(Destination(DestoType::DPosition(around_pos(result.0, 15.0))))
+                                ;
+                            });
+                            *state = ActionState::Executing;
+                        }
+                    }
+                }
+                ActionState::Executing => {
+                    let inv_ref = inventories.get(inv.0).unwrap();
+                    match target.0 {
+                        None => {
+                            *state = ActionState::Requested;
+                        }
+                        Some(_) => {}
+                    }
+
+                    match inv_ref.max_volume {
+                        None => {}
+                        Some(max_vol) => {
+                            if inv_ref.cached_current_volume > 0.95 * max_vol {
+                                //println!("cargo full");
+                                par_commands.command_scope(|mut commands| {
+                                    commands.entity(id)
+                                        .insert(WeaponTarget(None))
+                                    ;
+                                });
+                                //target.0 = None;
+                                *state = ActionState::Success;
+                            }
+                        }
+                    }
+                }
+                ActionState::Cancelled => {
+                    *state = ActionState::Failure;
+                }
+                _ => {}
+            }
+        }
+    );
+    /*
     for (Actor(actor), order, mut state) in action.iter_mut() {
         let (id, coord, pos, inv, anom, mut target, mut desto) = ship.get_mut(*actor).unwrap();
         match *state {
@@ -200,6 +263,8 @@ pub fn mine_anom_system(
             _ => {}
         }
     }
+
+     */
 }
 
 pub fn deposit_ore_action_system(
