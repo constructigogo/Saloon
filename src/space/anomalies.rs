@@ -113,7 +113,7 @@ pub fn mining_anomaly_lifecycle_system(
         }
         if reset {
             //commands.entity(id).insert(AnomalyInit);
-            println!("anom {:?} is empty, respawning ...", id);
+            //println!("anom {:?} is empty, respawning ...", id);
             commands.entity(id).remove::<AnomalyActive>();
         }
     }

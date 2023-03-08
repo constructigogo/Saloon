@@ -67,8 +67,8 @@ pub fn resource_gathering_system(
                                             }
                                         }
 
-                                        println!("mined {:?} ore, left {:?}",res_yield,well_ref.volume);
-                                        println!("cargo : {:?}/{:?}",inv_ref.cached_current_volume,value);
+                                        //println!("mined {:?} ore, left {:?}",res_yield,well_ref.volume);
+                                        //println!("cargo : {:?}/{:?}",inv_ref.cached_current_volume,value);
                                     }
                                 }
                             }

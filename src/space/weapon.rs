@@ -97,7 +97,7 @@ pub fn weapon_init_system(
     mut weapons: Query<(Entity, &Weapon), Or<(Added<Weapon>, Changed<Weapon>)>>,
 ) {
     for (id, weapon) in weapons.iter() {
-        println!("init weapon for {:?}", id);
+        //println!("init weapon for {:?}", id);
         let _damage: f32;
         let _damage_mult: f32;
         let _range: f64;

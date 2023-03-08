@@ -99,6 +99,7 @@ pub struct RenderGalaxyEvent;
 
 pub fn exit_system_view(
     keys: Res<Input<KeyCode>>,
+    mut system: ResMut<CurrentSystemDisplay>,
     mut ev: EventWriter<RenderGalaxyEvent>,
     mut ev_hide: EventWriter<HideSystemEvent>,
     mut state: ResMut<State<ViewState>>) {
@@ -109,6 +110,7 @@ pub fn exit_system_view(
             ev_hide.send(HideSystemEvent);
             ev.send(RenderGalaxyEvent);
             state.set(ViewState::GALAXY);
+            system.0 = None;
         }
     }
 }
@@ -152,7 +154,7 @@ pub fn flag_render_solar_system(
                 //flag for render entites in system val
                 for (entity, galaxy) in &query_future {
                     if galaxy.0 == val.0 {
-                        commands.entity(entity).insert(RenderFlag);
+                        commands.entity(entity).insert(Rendered);
                     }
                 }
                 println!("render map {:?}", val.0);
@@ -169,10 +171,14 @@ pub fn hide_system_view(mut commands: Commands,
                         mut ev_hide: EventReader<HideSystemEvent>) {
     if !ev_hide.is_empty() {
         //let sys = ev_hide.iter().next();
-        for (entity, mut vis) in &mut query {
-            vis.is_visible = false;
-            commands.entity(entity).remove::<Rendered>();
+        for ev in ev_hide.iter() {
+            for (entity, mut vis) in &mut query {
+                vis.is_visible = false;
+                commands.entity(entity).remove::<Rendered>();
+            }
+            println!("hide_system_view");
         }
+
         //state.set(ViewState::EMPTY);
     }
 }
@@ -182,11 +188,12 @@ pub fn hide_galaxy_view(mut commands: Commands,
                         mut state: ResMut<State<ViewState>>,
                         mut ev_hide: EventReader<HideGalaxyEvent>) {
     if !ev_hide.is_empty() {
-        //let sys = ev_hide.iter().next();
+        let sys = ev_hide.iter().next();
         for (entity, mut vis) in &mut query {
             vis.is_visible = false;
             commands.entity(entity).remove::<Rendered>();
         }
+        println!("hide_galaxy_view");
         //state.set(ViewState::EMPTY);
     }
 }
@@ -194,28 +201,31 @@ pub fn hide_galaxy_view(mut commands: Commands,
 pub fn generate_galaxy_view(mut commands: Commands,
                             mut query_clicked: Query<(Entity, &mut Visibility), (With<SolarSystem>)>,
                             mut state: ResMut<State<ViewState>>,
-                            ev_render: EventReader<RenderGalaxyEvent>) {
+                            mut ev_render: EventReader<RenderGalaxyEvent>) {
     if !ev_render.is_empty() {
-        for (entity, mut vis) in &mut query_clicked {
-            vis.is_visible = true;
-            commands.entity(entity).insert(Rendered);
+        for _ in ev_render.iter(){
+            for (entity, mut vis) in &mut query_clicked {
+                vis.is_visible = true;
+                commands.entity(entity).insert(Rendered);
+            }
+            //state.set(ViewState::GALAXY);
+            println!("render galaxy");
         }
-        //state.set(ViewState::GALAXY);
-        println!("render galaxy");
+
     }
 }
 
 pub fn generate_system_view(mut commands: Commands,
-                            mut query: Query<(Entity, &mut Visibility), Added<RenderFlag>>,
+                            mut query: Query<(Entity, &mut Visibility), Added<Rendered>>,
                             mut state: ResMut<State<ViewState>>) {
     for (entity, mut vis) in &mut query {
         vis.is_visible = true;
-        commands.entity(entity).insert(Rendered).remove::<RenderFlag>();
+        //commands.entity(entity).insert(Rendered).remove::<RenderFlag>();
     }
 }
 
 pub fn add_to_system_view(
-    mut commands : Commands,
+    mut commands: Commands,
     current: Res<CurrentSystemDisplay>,
     query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>, Without<RenderFlag>, Added<Transform>)>,
 ) {
@@ -224,7 +234,7 @@ pub fn add_to_system_view(
         Some(system) => {
             for (id, galaxy) in query_future.iter() {
                 if galaxy.0 == system {
-                    commands.entity(id).insert((RenderFlag));
+                    commands.entity(id).insert((Rendered));
                 }
             }
         }

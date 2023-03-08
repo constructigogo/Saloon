@@ -35,7 +35,7 @@ fn setup(mut commands: Commands) {
 }
 
 
-fn camera_input(time: Res<Time>,
+pub fn camera_input(time: Res<Time>,
                 mut camera_zoom: ResMut<CameraZoom>,
                 mut camera_query: Query<(&mut Transform), With<Camera>>,
                 keys: Res<Input<ScanCode>>,
@@ -116,7 +116,7 @@ fn camera_input(time: Res<Time>,
     }
 }
 
-fn camera_system_view(ev: EventReader<RenderSystemEvent>,
+pub fn camera_system_view(ev: EventReader<RenderSystemEvent>,
                       mut zoom: ResMut<CameraZoom>,
 ) {
     if !ev.is_empty() {

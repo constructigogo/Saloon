@@ -46,7 +46,7 @@ pub fn move_to_anom_system(
 
                 match anom {
                     None => {
-                        println!("no anom found, failure");
+                        //println!("no anom found, failure");
                         *state = ActionState::Failure;
                     }
                     Some(anom_value) => {
@@ -106,11 +106,11 @@ pub fn mine_anom_system(
 
                 match result.1 {
                     None => {
-                        println!("could not find asteroid in anom {:?}", anom.0);
+                        //println!("could not find asteroid in anom {:?}", anom.0);
                         *state = ActionState::Failure;
                     }
                     Some(asteroid_id) => {
-                        println!("found asteroid, moving to {:?}", asteroid_id);
+                        //println!("found asteroid, moving to {:?}", asteroid_id);
                         target.0 = Some(asteroid_id);
                         desto.0 = DestoType::DPosition(around_pos(result.0, 15.0));
                         *state = ActionState::Executing;
@@ -130,7 +130,7 @@ pub fn mine_anom_system(
                     None => {}
                     Some(max_vol) => {
                         if inv_ref.cached_current_volume > 0.95 * max_vol {
-                            println!("cargo full");
+                            //println!("cargo full");
                             target.0 = None;
                             *state = ActionState::Success;
                         }
@@ -173,7 +173,7 @@ pub fn deposit_ore_action_system(
                 match desto.0 {
                     DestoType::DPosition(target_pos) => {
                         if (pos.0.truncate() - target_pos.0.truncate()).length() < to_system(30.0) {
-                            println!("deposit ore");
+                            //println!("deposit ore");
                             *state = ActionState::Success;
                         }
                     }
@@ -212,7 +212,7 @@ pub fn deposit_ore_action_system(
                                         from: inv_id.0,
                                         to: closest_inv.0,
                                     });
-                                println!("order transfer of ORE");
+                                //println!("order transfer of ORE");
                             }
                         }
                     }

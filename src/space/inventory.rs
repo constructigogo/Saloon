@@ -111,7 +111,7 @@ pub fn register_inventory_to_ship_system(
     registers: Query<(Entity, &RegisterInventoryTo)>,
 ) {
     for (id, register) in registers.iter() {
-        println!("init inv for {:?}", register.0);
+        //println!("init inv for {:?}", register.0);
         commands.entity(register.0)
             .insert(OnboardInventory(id));
         commands.entity(id).remove::<RegisterInventoryTo>();
@@ -223,7 +223,7 @@ pub fn update_cached_volume_system(
     for (id, mut inv) in inventory.iter_mut() {
         let result = volume_in_inventory_mut(&mut inv, &check_inv);
         //assert!(Some(inv.max_volume>Some(result));
-        println!("{:?}/{:?}", result, inv.max_volume);
+        //println!("{:?}/{:?}", result, inv.max_volume);
         inv.cached_current_volume = result;
         commands.entity(id).remove::<UpdateCachedVolume>();
     }

@@ -2,6 +2,7 @@ use std::default;
 
 use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
+use bevy::log::LogPlugin;
 use bevy::math::DVec3;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
@@ -34,20 +35,24 @@ pub mod AI;
 
 
 fn main() {
-    App::new()
+    let mut app = App::new();
+    //app.add_plugins(DefaultPlugins.build().disable::<LogPlugin>());
+
+    app
         .add_plugins(DefaultPlugins)
         .add_plugin(BigBrainPlugin)
-        .add_plugin(EditorPlugin)
+        //.add_plugin(EditorPlugin)
         .add_plugins(DefaultPickingPlugins)
-        .add_plugin(DebugEventsPickingPlugin)
+        //.add_plugin(DebugEventsPickingPlugin)
         .add_plugins(BaseLogicPlugins)
         .add_plugins(SpaceGamePlugins)
         .add_plugins(AIPlugins)
         .add_plugin(TimerPlugin)
-        .add_startup_system(setup)
+        .add_startup_system(setup);
         //.add_system(frame_update)
         //.add_system(follow_mouse)
-        .run();
+    //bevy_mod_debugdump::print_schedule(&mut app);
+    app.run();
 }
 
 #[derive(Component)]
@@ -74,7 +79,7 @@ fn setup(
     mut cluster: ResMut<SystemMap>,
 ) {
     let mut rng = thread_rng();
-    for i in 0..1 {
+    for i in 0..1000 {
         let id = commands.spawn(
             (
                 SolarSystem {
@@ -186,7 +191,7 @@ fn setup(
 
 
 
-        for _ in 0..1 {
+        for _ in 0..10 {
             let mine_in_anom = Steps::build()
                 .label("MineInAnom")
                 .step(MoveToAnom)
