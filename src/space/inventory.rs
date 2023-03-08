@@ -14,7 +14,7 @@ pub struct OnboardInventory(pub Entity);
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
-pub struct RegisterInventoryToShip(pub Entity);
+pub struct RegisterInventoryTo(pub Entity);
 
 
 #[derive(Component)]
@@ -25,6 +25,13 @@ pub struct Inventory {
     pub max_volume: Option<f32>,
     pub cached_current_volume: f32,
 }
+
+#[derive(Bundle)]
+pub struct InventorySpawnBundle {
+    pub inv: Inventory,
+    pub register: RegisterInventoryTo,
+}
+
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
@@ -75,6 +82,19 @@ pub fn setup_world_inventory(
     commands.insert_resource(WorldInventory(world_inv));
 }
 
+pub fn spawn_inventory(target: Entity) -> InventorySpawnBundle {
+    return InventorySpawnBundle {
+        inv: Inventory {
+            owner: target,
+            location: target,
+            container: vec![],
+            max_volume: None,
+            cached_current_volume: 0.0,
+        },
+        register: RegisterInventoryTo(target),
+    };
+}
+
 pub fn spawn_item(target: Entity, __type: ItemType, _volume: f32) -> ItemBundle {
     return ItemBundle {
         item: Item {
@@ -85,15 +105,16 @@ pub fn spawn_item(target: Entity, __type: ItemType, _volume: f32) -> ItemBundle 
     };
 }
 
+
 pub fn register_inventory_to_ship_system(
     mut commands: Commands,
-    registers: Query<(Entity, &RegisterInventoryToShip)>,
+    registers: Query<(Entity, &RegisterInventoryTo)>,
 ) {
     for (id, register) in registers.iter() {
         println!("init inv for {:?}", register.0);
         commands.entity(register.0)
             .insert(OnboardInventory(id));
-        commands.entity(id).remove::<RegisterInventoryToShip>();
+        commands.entity(id).remove::<RegisterInventoryTo>();
     }
 }
 
@@ -234,6 +255,7 @@ fn volume_in_inventory_mut(inv: &mut Mut<Inventory>,
     return total;
 }
 
+pub fn owner_has_inventory_in_station() {}
 
 pub fn is_type_in_inventory(
     item_type: &ItemType,

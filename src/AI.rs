@@ -2,7 +2,7 @@ use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 use big_brain::BigBrainStage;
 
-use crate::AI::miner::{mine_anom_system, mine_scorer_system, move_to_anom_system};
+use crate::AI::miner::{deposit_ore_action_system, mine_anom_system, mine_scorer_system, move_to_anom_system};
 
 pub mod miner;
 
@@ -23,6 +23,7 @@ impl Plugin for MinerAIPlugin {
         app
             .add_system_to_stage(BigBrainStage::Actions, move_to_anom_system)
             .add_system_to_stage(BigBrainStage::Actions, mine_anom_system)
+            .add_system_to_stage(BigBrainStage::Actions, deposit_ore_action_system)
             .add_system_to_stage(BigBrainStage::Scorers, mine_scorer_system)
         ;
     }

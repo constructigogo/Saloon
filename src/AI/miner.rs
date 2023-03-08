@@ -1,13 +1,16 @@
+use std::os::linux::raw::stat;
+
 use bevy::math::DVec2;
 use bevy::prelude::*;
 use bevy::utils::tracing::Instrument;
 use big_brain::prelude::*;
 
-use crate::{Destination, DestoType, DVec3, GalaxyCoordinate, Inventory, SimPosition, to_system, WeaponTarget};
+use crate::{Destination, DestoType, DVec3, GalaxyCoordinate, Inventory, ItemType, SimPosition, to_system, TransferItemOrder, WeaponTarget};
 use crate::space::anomalies::{AnomalyActive, AnomalyMining};
 use crate::space::asteroid::AsteroidTag;
 use crate::space::galaxy::around_pos;
-use crate::space::inventory::OnboardInventory;
+use crate::space::inventory::{is_type_in_inventory, Item, OnboardInventory};
+use crate::space::station::AnchorableTag;
 
 #[derive(Clone, Component, Debug, ActionBuilder)]
 pub struct MoveToAnom;
@@ -57,7 +60,6 @@ pub fn move_to_anom_system(
                         }
                     }
                 }
-
             }
             ActionState::Executing => {
                 match desto.0 {
@@ -85,7 +87,7 @@ pub fn move_to_anom_system(
 }
 
 pub fn mine_anom_system(
-    mut ship: Query<(Entity, &GalaxyCoordinate, &SimPosition,&OnboardInventory, &MiningInAnom, &mut WeaponTarget, &mut Destination)>,
+    mut ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory, &MiningInAnom, &mut WeaponTarget, &mut Destination)>,
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining)>,
     asteroid: Query<(Entity, &SimPosition), With<AsteroidTag>>,
     inventories: Query<&Inventory>,
@@ -104,11 +106,11 @@ pub fn mine_anom_system(
 
                 match result.1 {
                     None => {
-                        println!("could not find asteroid in anom {:?}",anom.0);
+                        println!("could not find asteroid in anom {:?}", anom.0);
                         *state = ActionState::Failure;
                     }
                     Some(asteroid_id) => {
-                        println!("found asteroid, moving to {:?}",asteroid_id);
+                        println!("found asteroid, moving to {:?}", asteroid_id);
                         target.0 = Some(asteroid_id);
                         desto.0 = DestoType::DPosition(around_pos(result.0, 15.0));
                         *state = ActionState::Executing;
@@ -117,21 +119,21 @@ pub fn mine_anom_system(
             }
             ActionState::Executing => {
                 let inv_ref = inventories.get(inv.0).unwrap();
+                match target.0 {
+                    None => {
+                        *state = ActionState::Requested;
+                    }
+                    Some(_) => {}
+                }
+
                 match inv_ref.max_volume {
                     None => {}
                     Some(max_vol) => {
-                        if inv_ref.cached_current_volume > 0.95*max_vol {
+                        if inv_ref.cached_current_volume > 0.95 * max_vol {
                             println!("cargo full");
+                            target.0 = None;
                             *state = ActionState::Success;
                         }
-                    }
-                }
-                match target.0 {
-                    None=> {
-                        *state = ActionState::Requested;
-                    }
-                    Some(_) => {
-
                     }
                 }
             }
@@ -143,8 +145,86 @@ pub fn mine_anom_system(
     }
 }
 
-pub fn deposit_ore_action_system(){
+pub fn deposit_ore_action_system(
+    mut commands: Commands,
+    mut ships: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory, &mut Destination)>,
+    inventories: Query<&Inventory>,
+    items: Query<(&Item)>,
+    stations: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory), With<AnchorableTag>>,
+    mut action: Query<(&Actor, &DepositOre, &mut ActionState)>,
+) {
+    for (Actor(actor), action, mut state) in action.iter_mut() {
+        let (id, coord, pos, inv_id, mut desto) = ships.get_mut(*actor).unwrap();
+        match *state {
+            ActionState::Requested => {
+                let closest =
+                    get_closest_station(coord, pos, &stations);
 
+                match closest.1 {
+                    None => { *state = ActionState::Failure }
+                    Some(_) => {
+                        desto.0 = DestoType::DPosition(closest.0);
+                        *state = ActionState::Executing;
+                    }
+                }
+            }
+
+            ActionState::Executing => {
+                match desto.0 {
+                    DestoType::DPosition(target_pos) => {
+                        if (pos.0.truncate() - target_pos.0.truncate()).length() < to_system(30.0) {
+                            println!("deposit ore");
+                            *state = ActionState::Success;
+                        }
+                    }
+                    DestoType::TEntity(id) => {
+                        if (pos.0 - id.0).length() < to_system(30.0) {
+                            *state = ActionState::Success;
+                        }
+                    }
+                    DestoType::None => {}
+                }
+            }
+            ActionState::Success => {
+                let inv_ref = inventories.get(inv_id.0).unwrap();
+
+                let item =
+                    is_type_in_inventory(
+                        &ItemType::ORE,
+                        inv_ref,
+                        &items,
+                    );
+
+                match item {
+                    None => {}
+                    Some(item_id) => {
+                        let closest =
+                            get_closest_station(coord, pos, &stations);
+
+                        match closest.1 {
+                            None => {
+                                *state = ActionState::Failure;
+                            }
+                            Some(closest_id) => {
+                                let closest_inv = stations.get(closest_id).unwrap().3;
+                                commands.entity(item_id).insert(
+                                    TransferItemOrder {
+                                        from: inv_id.0,
+                                        to: closest_inv.0,
+                                    });
+                                println!("order transfer of ORE");
+                            }
+                        }
+                    }
+                }
+            }
+
+            ActionState::Cancelled => {
+                *state = ActionState::Failure;
+            }
+            _ => {}
+        }
+    }
 }
 
 pub fn mine_scorer_system(
@@ -154,6 +234,30 @@ pub fn mine_scorer_system(
 ) {
     for (Actor(actor), mut score) in query.iter_mut() {
         score.set(1.0);
+    }
+}
+
+
+fn get_closest_station(
+    in_coord: &GalaxyCoordinate,
+    at_pos: &SimPosition,
+    stations: &Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory), With<AnchorableTag>>,
+) -> (SimPosition, Option<Entity>) {
+    let res = (stations
+        .iter()
+        .filter(|x| x.1.0 == in_coord.0)
+        .min_by(|a, b| {
+            let da = (a.2.0 - at_pos.0).length_squared();
+            let db = (b.2.0 - at_pos.0).length_squared();
+            da.partial_cmp(&db).unwrap()
+        }));
+    match res {
+        Some(result) => {
+            return (*result.2, Some(result.0));
+        }
+        None => {
+            return (SimPosition(DVec3::ZERO), None);
+        }
     }
 }
 
@@ -174,13 +278,11 @@ fn get_closest_anom_pos(
     match res {
         Some(result) => {
             return (*result.2, Some(result.0));
-
         }
-        None =>{
+        None => {
             return (SimPosition(DVec3::ZERO), None);
         }
     }
-
 }
 
 fn get_closest_asteroid_in_anom(

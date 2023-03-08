@@ -5,9 +5,9 @@ use bevy::input::mouse::MouseMotion;
 use bevy::math::DVec3;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
+use bevy_editor_pls::egui::Label;
 use bevy_editor_pls::prelude::*;
 use bevy_mod_picking::*;
-use big_brain::BigBrainStage::Thinkers;
 use big_brain::prelude::*;
 use rand::{Rng, thread_rng};
 
@@ -16,14 +16,14 @@ use space::ship::pilot::*;
 use space::SpaceGamePlugins;
 
 use crate::AI::AIPlugins;
-use crate::AI::miner::{Mine, MineAnom, MoveToAnom};
+use crate::AI::miner::{DepositOre, Mine, MineAnom, MoveToAnom};
 use crate::base::*;
 use crate::base::timer::*;
 use crate::DestoType::TEntity;
 use crate::space::anomalies::{AnomalyInit, AnomalyMining, RegisterTo, spawn_anom};
 use crate::space::asteroid::{RessourceWell, spawn_asteroid};
 use crate::space::galaxy::{Rendered, SimPosition, to_system};
-use crate::space::inventory::{Inventory, ItemType, RegisterInventoryToShip, spawn_item, transfer_item, TransferItemOrder, UpdateCachedVolume};
+use crate::space::inventory::{Inventory, ItemType, RegisterInventoryTo, spawn_inventory, spawn_item, transfer_item, TransferItemOrder, UpdateCachedVolume};
 use crate::space::ship::*;
 use crate::space::station::{AnchorableBundle, spawn_station_at};
 use crate::space::weapon::{Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
@@ -113,6 +113,9 @@ fn setup(
             UndockLoc,
         )).id();
 
+        commands.spawn(spawn_inventory(station));
+
+
         let mid = commands.spawn((
             spawn_station_at(SimPosition(DVec3 {
                 x: 150000.0,
@@ -187,7 +190,8 @@ fn setup(
             let mine_in_anom = Steps::build()
                 .label("MineInAnom")
                 .step(MoveToAnom)
-                .step(MineAnom);
+                .step(MineAnom)
+                .step(DepositOre);
 
 
             let ship = commands.spawn((
@@ -218,11 +222,11 @@ fn setup(
                     owner: ship,
                     location: ship,
                     container: Vec::new(),
-                    max_volume: Some(953.6577),
+                    max_volume: Some(253.6577),
                     cached_current_volume:0.0
                 },
                 UpdateCachedVolume,
-                RegisterInventoryToShip(ship)
+                RegisterInventoryTo(ship)
             )).id();
         }
     }

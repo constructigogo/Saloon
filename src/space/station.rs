@@ -1,11 +1,15 @@
 use bevy::prelude::*;
 use crate::{GalaxyCoordinate, SimPosition};
 
+#[derive(Component)]
+pub struct AnchorableTag;
+
 #[derive(Bundle)]
 pub struct AnchorableBundle {
     display: SpriteBundle,
     sim_pos : SimPosition,
-    galaxy_pos :GalaxyCoordinate
+    galaxy_pos :GalaxyCoordinate,
+    tag : AnchorableTag,
 }
 
 pub fn spawn_station_at(at : SimPosition, galaxy : Entity ) -> AnchorableBundle{
@@ -24,6 +28,7 @@ pub fn spawn_station_at(at : SimPosition, galaxy : Entity ) -> AnchorableBundle{
             ..default()
         },
         sim_pos: at.clone(),
-        galaxy_pos: GalaxyCoordinate(galaxy)
+        galaxy_pos: GalaxyCoordinate(galaxy),
+        tag: AnchorableTag,
     }
 }
