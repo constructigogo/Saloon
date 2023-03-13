@@ -45,7 +45,6 @@ pub fn move_to_anom_system(
 
                     match anom {
                         None => {
-                            //println!("no anom found, failure");
                             *state = ActionState::Failure;
                         }
                         Some(anom_value) => {
@@ -55,7 +54,6 @@ pub fn move_to_anom_system(
                                     commands.entity(id).insert(Destination(
                                         DestoType::DPosition(around_pos(closest, 15.0))
                                     ));
-                                    //println!("action on {:?}, from {:?}, setting desto to {:?}",actor, pos.0.truncate(),closest.0.truncate());
                                     *state = ActionState::Executing;
                                 }
                             });
@@ -66,13 +64,11 @@ pub fn move_to_anom_system(
                     match desto.0 {
                         DestoType::DPosition(target_pos) => {
                             if (pos.0.truncate() - target_pos.0.truncate()).length() < to_system(30.0) {
-                                //println!("Success");
                                 *state = ActionState::Success;
                             }
                         }
                         DestoType::TEntity(id) => {
                             if (pos.0 - id.0).length() < to_system(30.0) {
-                                //println!("Success");
                                 *state = ActionState::Success;
                             }
                         }
@@ -110,7 +106,6 @@ pub fn mine_anom_system(
 
                     match result.1 {
                         None => {
-                            //println!("could not find asteroid in anom {:?}", anom.0);
                             *state = ActionState::Failure;
                         }
                         Some(asteroid_id) => {
@@ -137,13 +132,11 @@ pub fn mine_anom_system(
                         None => {}
                         Some(max_vol) => {
                             if inv_ref.cached_current_volume > 0.95 * max_vol {
-                                //println!("cargo full");
                                 par_commands.command_scope(|mut commands| {
                                     commands.entity(id)
                                         .insert(WeaponTarget(None))
                                     ;
                                 });
-                                //target.0 = None;
                                 *state = ActionState::Success;
                             }
                         }
@@ -191,7 +184,6 @@ pub fn deposit_ore_action_system(
                     match desto.0 {
                         DestoType::DPosition(target_pos) => {
                             if (pos.0.truncate() - target_pos.0.truncate()).length() < to_system(30.0) {
-                                //println!("deposit ore");
                                 *state = ActionState::Success;
                             }
                         }
