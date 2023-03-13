@@ -32,7 +32,7 @@ pub fn move_to_anom_system(
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining), With<AnomalyActive>>,
     mut action: Query<(&Actor, &MoveToAnom, &mut ActionState)>,
 ) {
-    action.par_for_each_mut(8,|(Actor(actor), order, mut state) |
+    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
         {
             let (id, coord, pos, mut desto) = ship.get(*actor).unwrap();
             match *state {
@@ -84,7 +84,7 @@ pub fn move_to_anom_system(
                 }
                 _ => {}
             }
-        }
+        },
     );
 
     /*
@@ -142,14 +142,14 @@ pub fn move_to_anom_system(
 }
 
 pub fn mine_anom_system(
-    mut par_commands :ParallelCommands,
+    mut par_commands: ParallelCommands,
     ship: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory, &MiningInAnom, &WeaponTarget, &Destination)>,
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining)>,
     asteroid: Query<(Entity, &SimPosition), With<AsteroidTag>>,
     inventories: Query<&Inventory>,
     mut action: Query<(&Actor, &MineAnom, &mut ActionState)>,
 ) {
-    action.par_for_each_mut(8,|(Actor(actor), order, mut state)|
+    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
         {
             let (id, coord, pos, inv, anom, mut target, mut desto) = ship.get(*actor).unwrap();
             match *state {
@@ -167,7 +167,6 @@ pub fn mine_anom_system(
                             *state = ActionState::Failure;
                         }
                         Some(asteroid_id) => {
-
                             par_commands.command_scope(|mut commands| {
                                 commands.entity(id)
                                     .insert(WeaponTarget(Some(asteroid_id)))
@@ -208,7 +207,7 @@ pub fn mine_anom_system(
                 }
                 _ => {}
             }
-        }
+        },
     );
     /*
     for (Actor(actor), order, mut state) in action.iter_mut() {
@@ -266,13 +265,95 @@ pub fn mine_anom_system(
 }
 
 pub fn deposit_ore_action_system(
-    mut commands: Commands,
-    mut ships: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory, &mut Destination)>,
+    mut par_commands: ParallelCommands,
+    ships: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory, &mut Destination)>,
     inventories: Query<&Inventory>,
     items: Query<(&Item)>,
     stations: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory), With<AnchorableTag>>,
     mut action: Query<(&Actor, &DepositOre, &mut ActionState)>,
 ) {
+    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
+        {
+            let (id, coord, pos, inv_id, mut desto) = ships.get(*actor).unwrap();
+            match *state {
+                ActionState::Requested => {
+                    let closest =
+                        get_closest_station(coord, pos, &stations);
+
+                    match closest.1 {
+                        None => { *state = ActionState::Failure }
+                        Some(_) => {
+                            par_commands.command_scope(|mut commands| {
+                                commands.entity(id)
+                                    .insert(Destination(DestoType::DPosition(closest.0)))
+                                ;
+                            });
+                            *state = ActionState::Executing;
+                        }
+                    }
+                }
+
+                ActionState::Executing => {
+                    match desto.0 {
+                        DestoType::DPosition(target_pos) => {
+                            if (pos.0.truncate() - target_pos.0.truncate()).length() < to_system(30.0) {
+                                //println!("deposit ore");
+                                *state = ActionState::Success;
+                            }
+                        }
+                        DestoType::TEntity(id) => {
+                            if (pos.0 - id.0).length() < to_system(30.0) {
+                                *state = ActionState::Success;
+                            }
+                        }
+                        DestoType::None => {}
+                    }
+                }
+                ActionState::Success => {
+                    let inv_ref = inventories.get(inv_id.0).unwrap();
+
+                    let item =
+                        is_type_in_inventory(
+                            &ItemType::ORE,
+                            inv_ref,
+                            &items,
+                        );
+
+                    match item {
+                        None => {}
+                        Some(item_id) => {
+                            let closest =
+                                get_closest_station(coord, pos, &stations);
+
+                            match closest.1 {
+                                None => {
+                                    *state = ActionState::Failure;
+                                }
+                                Some(closest_id) => {
+                                    let closest_inv = stations.get(closest_id).unwrap().3;
+
+                                    par_commands.command_scope(|mut commands| {
+                                        commands.entity(item_id).insert(
+                                            TransferItemOrder {
+                                                from: inv_id.0,
+                                                to: closest_inv.0,
+                                            });
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ActionState::Cancelled => {
+                    *state = ActionState::Failure;
+                }
+                _ => {}
+            }
+        },
+    );
+
+    /*
     for (Actor(actor), action, mut state) in action.iter_mut() {
         let (id, coord, pos, inv_id, mut desto) = ships.get_mut(*actor).unwrap();
         match *state {
@@ -345,6 +426,7 @@ pub fn deposit_ore_action_system(
             _ => {}
         }
     }
+     */
 }
 
 pub fn mine_scorer_system(

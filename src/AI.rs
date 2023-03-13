@@ -2,10 +2,9 @@ use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
 use big_brain::BigBrainStage;
 
-use crate::AI::miner::{deposit_ore_action_system, mine_anom_system, mine_scorer_system, move_to_anom_system};
+use crate::AI::miner::*;
 
 pub mod miner;
-
 
 pub struct AIPlugins;
 

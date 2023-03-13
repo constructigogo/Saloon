@@ -36,9 +36,9 @@ pub mod AI;
 
 fn main() {
     let mut app = App::new();
-    //app.add_plugins(DefaultPlugins.build().disable::<LogPlugin>());
 
     app
+        //.add_plugins(DefaultPlugins.build().disable::<LogPlugin>())
         .add_plugins(DefaultPlugins)
         .add_plugin(BigBrainPlugin)
         //.add_plugin(EditorPlugin)
@@ -49,9 +49,11 @@ fn main() {
         .add_plugins(AIPlugins)
         .add_plugin(TimerPlugin)
         .add_startup_system(setup);
-        //.add_system(frame_update)
-        //.add_system(follow_mouse)
+    //.add_system(frame_update)
+    //.add_system(follow_mouse)
+
     //bevy_mod_debugdump::print_schedule(&mut app);
+    //bevy_mod_debugdump::print_render_graph(&mut app);
     app.run();
 }
 
@@ -79,7 +81,7 @@ fn setup(
     mut cluster: ResMut<SystemMap>,
 ) {
     let mut rng = thread_rng();
-    for i in 0..1000 {
+    for i in 0..3 {
         let id = commands.spawn(
             (
                 SolarSystem {
@@ -165,7 +167,7 @@ fn setup(
                 location: anom,
                 container: Vec::new(),
                 max_volume: None,
-                cached_current_volume:0.0
+                cached_current_volume: 0.0,
             },
             UpdateCachedVolume
         )).id();
@@ -184,14 +186,13 @@ fn setup(
                 location: first,
                 container: vec_inv,
                 max_volume: Some(15.0),
-                cached_current_volume:0.0
+                cached_current_volume: 0.0,
             },
             UpdateCachedVolume
         )).id();
 
 
-
-        for _ in 0..10 {
+        for _ in 0..2 {
             let mine_in_anom = Steps::build()
                 .label("MineInAnom")
                 .step(MoveToAnom)
@@ -209,13 +210,13 @@ fn setup(
                         Mine,
                         mine_in_anom,
                     ),
-                WeaponBundle{
+                WeaponBundle {
                     _weapon: Weapon {
                         _type: WeaponType::Mining,
                         config: WeaponConfig::RangeShort,
                         size: WeaponSize::Small,
                         tier: 1,
-                        bank: 1
+                        bank: 1,
                     },
                     target: WeaponTarget(None),
                     in_range: WeaponInRange(false),
@@ -228,7 +229,7 @@ fn setup(
                     location: ship,
                     container: Vec::new(),
                     max_volume: Some(253.6577),
-                    cached_current_volume:0.0
+                    cached_current_volume: 0.0,
                 },
                 UpdateCachedVolume,
                 RegisterInventoryTo(ship)
