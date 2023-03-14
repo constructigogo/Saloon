@@ -128,7 +128,7 @@ pub fn undock_pilot_system(
                     },
                     movable: MovableBundle {
                         coordinate: GalaxyCoordinate(trans.1.0),
-                        simulation_position: SimPosition((trans.0.0 * 3.0) * 0.000001),
+                        simulation_position: SimPosition(trans.0.0),
                         mass: Mass(1500000),
                         velocity: Velocity::default(),
                         thruster: ThrusterEngine {

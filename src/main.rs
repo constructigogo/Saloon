@@ -23,7 +23,7 @@ use crate::base::timer::*;
 use crate::DestoType::TEntity;
 use crate::space::anomalies::{AnomalyInit, AnomalyMining, RegisterTo, spawn_anom};
 use crate::space::asteroid::{RessourceWell, spawn_asteroid};
-use crate::space::galaxy::{Rendered, SimPosition, m_to_system};
+use crate::space::galaxy::{Rendered, SimPosition, m_to_system, au_to_system};
 use crate::space::inventory::{Inventory, ItemType, RegisterInventoryTo, spawn_inventory, spawn_item, transfer_item, TransferItemOrder, UpdateCachedVolume};
 use crate::space::ship::*;
 use crate::space::station::{AnchorableBundle, spawn_station_at};
@@ -81,7 +81,7 @@ fn setup(
     mut cluster: ResMut<SystemMap>,
 ) {
     let mut rng = thread_rng();
-    for i in 0..3 {
+    for i in 0..1 {
         let id = commands.spawn(
             (
                 SolarSystem {
@@ -124,6 +124,7 @@ fn setup(
         commands.spawn(spawn_inventory(station));
          */
 
+        /*
         let mid = commands.spawn((
             spawn_station_at(SimPosition(DVec3 {
                 x: 150000.0,
@@ -134,15 +135,17 @@ fn setup(
         )).id();
 
         commands.spawn(spawn_inventory(mid));
-
+         */
         let far = commands.spawn((
             spawn_station_at(SimPosition(DVec3 {
-                x: 1500000.0,
+                x: au_to_system(25.0),
                 y: 0.0,
                 z: 0.0,
             }), id),
             UndockLoc,
         )).id();
+        commands.spawn(spawn_inventory(far));
+
 
         let anom = commands.spawn((
             spawn_anom(SimPosition(DVec3 {
@@ -178,7 +181,7 @@ fn setup(
 
         let first = commands.spawn((
             spawn_new_pilot(),
-            UndockingFrom(mid),
+            UndockingFrom(far),
         )).id();
 
         let mut vec_inv: Vec<Entity> = Vec::new();
@@ -195,7 +198,7 @@ fn setup(
         )).id();
 
 
-        for _ in 0..2 {
+        for _ in 0..1 {
             let mine_in_anom = Steps::build()
                 .label("MineInAnom")
                 .step(MoveToAnom)
@@ -205,7 +208,7 @@ fn setup(
 
             let ship = commands.spawn((
                 spawn_new_pilot(),
-                UndockingFrom(mid),
+                UndockingFrom(far),
                 Thinker::build()
                     .label("mine")
                     .picker(FirstToScore { threshold: 0.8 })
