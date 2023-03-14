@@ -9,14 +9,18 @@ use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickingCameraBundl
 use rand::{Rng, thread_rng};
 use rand::rngs::ThreadRng;
 
-pub fn to_system(from: f64) -> f64 {
+pub fn m_to_system(from: f64) -> f64 {
     return from * 0.000001;
+}
+
+pub fn au_to_system(from : f64) -> f64 {
+    return from * 150000.0;
 }
 
 pub fn around_pos(pos: SimPosition, radius: f64) -> SimPosition {
     let rng = thread_rng().gen::<f64>() * 2.0 * PI;
     let rad = thread_rng().gen_range::<f64, Range<f64>>(0.0..radius);
-    let n_pos = pos.0 + ((DVec3::new(f64::cos(rng), f64::sin(rng), 0.0)) * to_system(rad));
+    let n_pos = pos.0 + ((DVec3::new(f64::cos(rng), f64::sin(rng), 0.0)) * m_to_system(rad));
     return SimPosition(n_pos);
 }
 

@@ -7,6 +7,7 @@ use rand::prelude::*;
 use crate::base::velocity::*;
 use crate::space::galaxy::SimPosition;
 use crate::space::pilot::*;
+use crate::warp::Warping;
 
 use super::galaxy::GalaxyCoordinate;
 
@@ -15,12 +16,13 @@ pub mod velocity;
 
 #[path = "../space/pilot.rs"]
 pub mod pilot;
+pub mod warp;
 
 
 ///TODO should schedule only a few times per frame
 pub fn compute_ship_forces(
     time: Res<Time>,
-    mut query: Query<(&mut Velocity, &SimPosition, &Destination, &Mass, &ThrusterEngine, )>) {
+    mut query: Query<(&mut Velocity, &SimPosition, &Destination, &Mass, &ThrusterEngine), Without<Warping>>) {
     query.par_for_each_mut(8, |(mut vel, sPos, dest, mass, thruster)|
         {
             let desto_type: &DestoType = &dest.0;

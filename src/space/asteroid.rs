@@ -53,7 +53,7 @@ pub fn spawn_asteroid(at: SimPosition, galaxy: Entity) -> AsteroidBundle {
         },
         well: RessourceWell {
             _type: ItemType::ORE,
-            volume: 100.0
+            volume: 10000.0
         },
         tag: AsteroidTag
     }

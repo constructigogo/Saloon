@@ -23,7 +23,7 @@ use crate::base::timer::*;
 use crate::DestoType::TEntity;
 use crate::space::anomalies::{AnomalyInit, AnomalyMining, RegisterTo, spawn_anom};
 use crate::space::asteroid::{RessourceWell, spawn_asteroid};
-use crate::space::galaxy::{Rendered, SimPosition, to_system};
+use crate::space::galaxy::{Rendered, SimPosition, m_to_system};
 use crate::space::inventory::{Inventory, ItemType, RegisterInventoryTo, spawn_inventory, spawn_item, transfer_item, TransferItemOrder, UpdateCachedVolume};
 use crate::space::ship::*;
 use crate::space::station::{AnchorableBundle, spawn_station_at};
@@ -48,8 +48,8 @@ fn main() {
         .add_plugins(SpaceGamePlugins)
         .add_plugins(AIPlugins)
         .add_plugin(TimerPlugin)
+        //.add_system(frame_update)
         .add_startup_system(setup);
-    //.add_system(frame_update)
     //.add_system(follow_mouse)
 
     //bevy_mod_debugdump::print_schedule(&mut app);
@@ -115,13 +115,14 @@ fn setup(
 
         cluster.0.push(id);
 
+        /*
         let station = commands.spawn((
             spawn_station_at(SimPosition(DVec3::ZERO), id),
             UndockLoc,
         )).id();
 
         commands.spawn(spawn_inventory(station));
-
+         */
 
         let mid = commands.spawn((
             spawn_station_at(SimPosition(DVec3 {
@@ -131,6 +132,8 @@ fn setup(
             }), id),
             UndockLoc,
         )).id();
+
+        commands.spawn(spawn_inventory(mid));
 
         let far = commands.spawn((
             spawn_station_at(SimPosition(DVec3 {
@@ -143,8 +146,8 @@ fn setup(
 
         let anom = commands.spawn((
             spawn_anom(SimPosition(DVec3 {
-                x: to_system(400.0),
-                y: to_system(400.0),
+                x: m_to_system(400.0),
+                y: m_to_system(400.0),
                 z: 0.0,
             }), id),
             AnomalyMining { tracked: Vec::new() },
@@ -153,8 +156,8 @@ fn setup(
 
         let anom2 = commands.spawn((
             spawn_anom(SimPosition(DVec3 {
-                x: to_system(-400.0),
-                y: to_system(-400.0),
+                x: m_to_system(-400.0),
+                y: m_to_system(-400.0),
                 z: 0.0,
             }), id),
             AnomalyMining { tracked: Vec::new() },
@@ -175,7 +178,7 @@ fn setup(
 
         let first = commands.spawn((
             spawn_new_pilot(),
-            UndockingFrom(station),
+            UndockingFrom(mid),
         )).id();
 
         let mut vec_inv: Vec<Entity> = Vec::new();
@@ -202,7 +205,7 @@ fn setup(
 
             let ship = commands.spawn((
                 spawn_new_pilot(),
-                UndockingFrom(station),
+                UndockingFrom(mid),
                 Thinker::build()
                     .label("mine")
                     .picker(FirstToScore { threshold: 0.8 })

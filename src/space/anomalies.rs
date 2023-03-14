@@ -4,7 +4,7 @@ use std::time::Duration;
 use bevy::{ecs::{entity::Entities, query}, prelude::*};
 use bevy::ecs::query::QueryEntityError;
 
-use crate::{DVec3, GalaxyCoordinate, ItemType, RessourceWell, SimPosition, SolarSystem, spawn_asteroid, to_system};
+use crate::{DVec3, GalaxyCoordinate, ItemType, RessourceWell, SimPosition, SolarSystem, spawn_asteroid, m_to_system};
 use crate::space::asteroid::AsteroidTag;
 use crate::space::galaxy::{DisplayableGalaxyEntityBundle, GalaxyEntityBundle};
 

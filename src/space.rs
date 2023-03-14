@@ -10,6 +10,7 @@ use crate::space::inventory::{debug_items, register_inventory_to_ship_system, se
 use crate::space::project::project_to_camera;
 use crate::space::weapon::mining::resource_gathering_system;
 use crate::transfer_item;
+use crate::warp::{check_for_warp_system, init_warp_system, warp_movement_system};
 
 use self::galaxy::*;
 use self::ship::*;
@@ -77,6 +78,9 @@ impl Plugin for ShipPlugins {
     fn build(&self, app: &mut App) {
         app
             .add_system(compute_ship_forces)
+            .add_system(init_warp_system)
+            .add_system(check_for_warp_system)
+            .add_system(warp_movement_system)
             .add_system(undock_pilot_system);
     }
 }

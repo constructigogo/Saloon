@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::{ecs::{entity::Entities, query}, prelude::*};
 use bevy::ecs::query::QueryEntityError;
 
-use crate::{SimPosition, to_system};
+use crate::{SimPosition, m_to_system};
 use crate::space::weapon::mining::ResourceGatherer;
 
 pub mod mining;
@@ -70,7 +70,7 @@ pub fn weapon_range_checker_system(
                 let target_pos = targetpos.get(ent);
                 match target_pos {
                     Ok(t_pos) => {
-                        inrange.0 = (t_pos.0 - pos.0).length_squared() < to_system(15.0 * 15.0)
+                        inrange.0 = (t_pos.0 - pos.0).length_squared() < m_to_system(15.0 * 15.0)
                     }
                     Err(_) => { target.0 = None }
                 }
@@ -129,7 +129,7 @@ pub fn weapon_init_system(
 
         let result = WeaponStats {
             damage: _damage,
-            range: to_system(35.0),
+            range: m_to_system(35.0),
             reload: Timer::new(
                 Duration::from_secs_f32(1.0),
                 TimerMode::Repeating,
