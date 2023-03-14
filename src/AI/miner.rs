@@ -194,8 +194,48 @@ pub fn deposit_ore_action_system(
                     match desto.0 {
                         DestoType::DPosition(target_pos) => {
                             if (pos.0.truncate() - target_pos.0.truncate()).length() < m_to_system(30.0) {
-                                *state = ActionState::Success;
-                                //println!("here");
+                                //println!("try to deposit");
+                                //println!("deposit");
+                                let inv_ref = inventories.get(inv_id.0).unwrap();
+
+                                let item =
+                                    is_type_in_inventory(
+                                        &ItemType::ORE,
+                                        inv_ref,
+                                        &items,
+                                    );
+
+                                match item {
+                                    None => {
+                                        *state = ActionState::Failure;
+                                    }
+                                    Some(item_id) => {
+                                        //println!("has item to deposit");
+                                        let closest =
+                                            get_closest_station(coord, pos, &stations);
+
+                                        match closest.1 {
+                                            None => {
+                                                //println!("cant deposit");
+                                                *state = ActionState::Failure;
+                                            }
+                                            Some(closest_id) => {
+                                                //println!("deposit");
+                                                let closest_inv = stations.get(closest_id).unwrap().3;
+                                                par_commands.command_scope(|mut commands| {
+                                                    commands.entity(item_id).insert(
+                                                        TransferItemOrder {
+                                                            from: inv_id.0,
+                                                            to: closest_inv.0,
+                                                        });
+                                                    //println!("scheduled transfer");
+                                                });
+                                                *state = ActionState::Success;
+                                                //println!("deposit")
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                         DestoType::TEntity(id) => {
@@ -207,43 +247,7 @@ pub fn deposit_ore_action_system(
                     }
                 }
                 ActionState::Success => {
-                    //println!("deposit");
-                    let inv_ref = inventories.get(inv_id.0).unwrap();
 
-                    let item =
-                        is_type_in_inventory(
-                            &ItemType::ORE,
-                            inv_ref,
-                            &items,
-                        );
-
-                    match item {
-                        None => {}
-                        Some(item_id) => {
-                            //println!("has item");
-                            let closest =
-                                get_closest_station(coord, pos, &stations);
-
-                            match closest.1 {
-                                None => {
-                                    println!("cant deposit");
-                                    *state = ActionState::Failure;
-                                }
-                                Some(closest_id) => {
-                                    println!("deposit");
-                                    let closest_inv = stations.get(closest_id).unwrap().3;
-                                    par_commands.command_scope(|mut commands| {
-                                        commands.entity(item_id).insert(
-                                            TransferItemOrder {
-                                                from: inv_id.0,
-                                                to: closest_inv.0,
-                                            });
-                                    });
-                                    //println!("deposit")
-                                }
-                            }
-                        }
-                    }
                 }
                 ActionState::Cancelled => {
                     *state = ActionState::Failure;
