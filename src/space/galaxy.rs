@@ -7,6 +7,7 @@ use std::thread::current;
 use bevy::{ecs::{entity::Entities, query}, prelude::*};
 use bevy::ecs::system::lifetimeless::SCommands;
 use bevy::math::DVec3;
+use bevy::utils::HashMap;
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickingCameraBundle, PickingEvent};
 use rand::{Rng, thread_rng};
 use rand::rngs::ThreadRng;
@@ -41,10 +42,10 @@ pub struct GalaxyCoordinate(pub Entity);
 pub struct GalaxyScale(pub f64);
 
 /// Since coordinates are float we need to avoid going into large coordinates value
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct SolarSystem {
     pub anomalies: Vec<Entity>,
-    pub gates: Vec<Entity>,
+    pub gates: HashMap<Entity,Entity>,
     //pub size: f32, //probably useless we'll see
 }
 
@@ -53,9 +54,9 @@ pub struct SolarSystem {
 pub struct SimPosition(pub DVec3);
 
 #[derive(Bundle)]
-pub struct GalaxyGateBundle {
+pub struct GalaxySpawnGateBundle {
     pub tag: GalaxyGateTag,
-    pub desto: GateDestination,
+    pub disp : DisplayableGalaxyEntityBundle,
 }
 
 #[derive(Component, Deref)]
@@ -230,7 +231,7 @@ pub fn generate_system_view(mut commands: Commands,
     }
 }
 
-pub fn add_to_system_view(
+pub fn add_new_to_system_view(
     mut commands: Commands,
     current: Res<CurrentSystemDisplay>,
     query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>, Without<RenderFlag>, Added<Transform>)>,
@@ -242,6 +243,40 @@ pub fn add_to_system_view(
                 if galaxy.0 == system {
                     commands.entity(id).insert((Rendered));
                 }
+            }
+        }
+    }
+}
+
+pub fn add_changed_to_system_view(
+    mut commands: Commands,
+    current: Res<CurrentSystemDisplay>,
+    mut query_future: Query<(Entity, &GalaxyCoordinate), (Without<Rendered>, Changed<GalaxyCoordinate>)>,
+) {
+    match current.0 {
+        None => {}
+        Some(system) => {
+            for (id, galaxy) in query_future.iter_mut() {
+                if galaxy.0 == system {
+                    commands.entity(id).insert((Rendered));
+                }
+            }
+        }
+    }
+}
+
+pub fn remove_changed_system_view(
+    mut commands: Commands,
+    current: Res<CurrentSystemDisplay>,
+    mut query_future: Query<(Entity, &mut Visibility, &GalaxyCoordinate), (With<Rendered>, Changed<GalaxyCoordinate>)>,
+) {
+    match current.0 {
+        None => {}
+        Some(system) => {
+            for (id,mut vis, galaxy) in query_future.iter_mut() {
+                if galaxy.0 != system {
+                    vis.is_visible = false;
+                    commands.entity(id).remove::<Rendered>();                }
             }
         }
     }

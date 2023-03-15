@@ -4,6 +4,7 @@ use bevy::prelude::system_adapter::new;
 use bevy::utils::tracing::callsite::register;
 
 use crate::camera::{camera_input, camera_system_view, CameraControllerPlugin};
+use crate::map::register_gate_system;
 use crate::space::anomalies::*;
 use crate::space::asteroid::asteroid_life_cycle_system;
 use crate::space::inventory::{debug_items, register_inventory_to_ship_system, setup_world_inventory, update_cached_volume_system};
@@ -56,6 +57,7 @@ impl Plugin for GalaxyPlugin {
             .add_event::<HideSystemEvent>()
             .add_event::<RenderGalaxyEvent>()
             .add_event::<RenderSystemEvent>()
+            .add_system(register_gate_system)
             .add_system(
                 project_to_camera
                     .after(camera_input)
@@ -66,7 +68,9 @@ impl Plugin for GalaxyPlugin {
             .add_system(click_enter_system_view.after(exit_system_view))
             .add_system(hide_galaxy_view.after(click_enter_system_view))
             .add_system(hide_system_view.after(generate_system_view))
-            .add_system(add_to_system_view.before(generate_system_view))
+            .add_system(add_new_to_system_view.before(generate_system_view))
+            .add_system(add_changed_to_system_view.before(generate_system_view))
+            .add_system(remove_changed_system_view.before(generate_system_view))
             .add_system(flag_render_solar_system.before(generate_system_view))
             .add_system(generate_galaxy_view.after(hide_system_view))
             .add_system(generate_system_view.after(hide_galaxy_view));

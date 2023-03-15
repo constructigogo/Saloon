@@ -3,6 +3,7 @@ use bevy::input::mouse::MouseMotion;
 use bevy::math::DVec3;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
+use bevy::utils::HashMap;
 use bevy_mod_picking::*;
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use big_brain::prelude::*;
@@ -86,7 +87,7 @@ fn setup(
             (
                 SolarSystem {
                     anomalies: Vec::new(),
-                    gates: Vec::new(),
+                    gates: HashMap::new(),
                 },
                 UndockLoc,
                 SimPosition(DVec3 {
