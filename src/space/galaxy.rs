@@ -1,3 +1,5 @@
+pub mod map;
+
 use std::f64::consts::PI;
 use std::ops::Range;
 use std::thread::current;

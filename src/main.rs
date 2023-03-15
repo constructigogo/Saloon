@@ -4,6 +4,7 @@ use bevy::math::DVec3;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy_mod_picking::*;
+use bevy_prototype_debug_lines::DebugLinesPlugin;
 use big_brain::prelude::*;
 use rand::thread_rng;
 
@@ -16,6 +17,7 @@ use crate::AI::miner::{DepositOre, Mine, MineAnom, MoveToAnom};
 use crate::base::*;
 use crate::base::timer::*;
 use crate::DestoType::TEntity;
+use crate::map::{generate_map_pathfinding_system, line_debug};
 use crate::space::anomalies::*;
 use crate::space::asteroid::*;
 use crate::space::galaxy::*;
@@ -35,6 +37,7 @@ fn main() {
     app
         //.add_plugins(DefaultPlugins.build().disable::<LogPlugin>())
         .add_plugins(DefaultPlugins)
+        .add_plugin(DebugLinesPlugin::default())
         .add_plugin(BigBrainPlugin)
         //.add_plugin(EditorPlugin)
         .add_plugins(DefaultPickingPlugins)
@@ -44,7 +47,9 @@ fn main() {
         .add_plugins(AIPlugins)
         .add_plugin(TimerPlugin)
         //.add_system(frame_update)
-        .add_startup_system(setup);
+        .add_startup_system(generate_map_pathfinding_system)
+        .add_system(line_debug)
+    ;
     //.add_system(follow_mouse)
 
     //bevy_mod_debugdump::print_schedule(&mut app);
