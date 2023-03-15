@@ -9,6 +9,15 @@ use bevy_prototype_debug_lines::DebugLines;
 use crate::{DVec3, m_to_system, MaterialMesh2dBundle, Rendered, SimPosition, SolarSystem, SystemMap, UndockLoc, ViewState};
 use crate::ViewState::GALAXY;
 
+#[derive(Component, Deref)]
+pub struct TravelRoute{
+    route : VecDeque<Entity>,
+}
+
+#[derive(Component, Deref)]
+pub struct TravelTo(pub Entity);
+
+
 struct GalaxyMap {
     //Every system
     node: Vec<Entity>,
@@ -42,7 +51,7 @@ pub fn generate_map_pathfinding_system(
 
     let mut adj: Vec<(Entity, Vec<usize>)> = Vec::new();
 
-    let mut testHash: HashMap<Entity, Vec<Entity>> = HashMap::new();
+    let mut test_hash: HashMap<Entity, Vec<Entity>> = HashMap::new();
 
     for pos in positions.iter() {
         let id = commands.spawn(
@@ -69,7 +78,7 @@ pub fn generate_map_pathfinding_system(
             )).remove::<Selection>().id();
 
         adj.push((id, Vec::new()));
-        testHash.insert(id, Vec::new());
+        test_hash.insert(id, Vec::new());
 
         cluster.0.push(id);
     }
@@ -79,20 +88,32 @@ pub fn generate_map_pathfinding_system(
     add_edge(&mut adj, 3, 1);
     add_edge(&mut adj, 3, 2);
     //add_edge(&mut adj,2,0);
-    add_edge_hash(&mut testHash, adj[0].0, adj[1].0);
-    add_edge_hash(&mut testHash, adj[1].0, adj[2].0);
-    add_edge_hash(&mut testHash, adj[3].0, adj[1].0);
-    add_edge_hash(&mut testHash, adj[3].0, adj[2].0);
-
+    add_edge_hash(&mut test_hash, adj[0].0, adj[1].0);
+    add_edge_hash(&mut test_hash, adj[1].0, adj[2].0);
+    add_edge_hash(&mut test_hash, adj[3].0, adj[1].0);
+    add_edge_hash(&mut test_hash, adj[3].0, adj[2].0);
 
 
     println!("{:?}", adj);
-    println!("{:?}", testHash);
+    println!("{:?}", test_hash);
 
     let mut RouteList: HashMap<(Entity, Entity), Route> = HashMap::new();
 
-    get_route(&mut testHash,adj[0].0,adj[3].0);
+    get_route(&mut test_hash, adj[0].0, adj[3].0);
 
+    let mut all_routes : HashMap<(Entity, Entity), VecDeque<Entity>> = HashMap::new();
+
+    for key in test_hash.keys() {
+        for other in test_hash.keys() {
+            if key != other {
+                all_routes.insert(
+                    (*key,*other),
+                    get_route(&test_hash,*key,*other));
+            }
+        }
+    }
+
+    println!("{:?}", all_routes);
 
     commands.insert_resource(DebugLineMap {
         val: adj
@@ -118,18 +139,18 @@ fn add_edge_hash(
 }
 
 fn get_route(
-    mut _map: &mut HashMap<Entity, Vec<Entity>>,
+    _map: & HashMap<Entity, Vec<Entity>>,
     from: Entity,
     to: Entity,
-) {
+) -> VecDeque<Entity> {
     let mut visited: HashMap<Entity, bool> = HashMap::new();
     let mut queue: VecDeque<Entity> = VecDeque::new();
-    let mut pred : HashMap<Entity,Option<Entity>> = HashMap::new();
+    let mut pred: HashMap<Entity, Option<Entity>> = HashMap::new();
     let mut route: VecDeque<Entity> = VecDeque::new();
 
     for key in _map.keys() {
         visited.insert(*key, false);
-        pred.insert(*key,None);
+        pred.insert(*key, None);
     }
     visited.insert(from, true);
     queue.push_back(from);
@@ -139,11 +160,11 @@ fn get_route(
         for neigh in _map.get(&current).unwrap().iter() {
             if !*visited.get(neigh).unwrap() {
                 visited.insert(*neigh, true);
-                pred.insert(*neigh,Some(current));
+                pred.insert(*neigh, Some(current));
                 queue.push_back(*neigh);
 
                 if *neigh == to {
-                    println!("found");
+                    //println!("found");
                     break;
                 }
             }
@@ -157,8 +178,8 @@ fn get_route(
         crawl = pred.get(&crawl).unwrap().unwrap();
     }
 
-    println!("{:?}",route);
-
+    //println!("{:?}", route);
+    return route;
 }
 
 
@@ -170,7 +191,7 @@ pub struct DebugLineMap {
 pub fn line_debug(
     state: Res<State<ViewState>>,
     _map: Res<DebugLineMap>,
-    mut linesDraw: ResMut<DebugLines>,
+    mut lines_draw: ResMut<DebugLines>,
     query: Query<&Transform>,
 ) {
     if *state.current() == GALAXY {
@@ -178,7 +199,7 @@ pub fn line_debug(
             let _self = query.get(lines.0).unwrap();
             for line in lines.1.iter() {
                 let to = query.get(_map.val[*line].0).unwrap();
-                linesDraw.line(_self.translation, to.translation, 0.0);
+                lines_draw.line(_self.translation, to.translation, 0.0);
             }
         }
     }
