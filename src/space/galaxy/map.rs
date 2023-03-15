@@ -41,6 +41,7 @@ pub fn generate_map_pathfinding_system(
 
     let mut adj: Vec<(Entity, Vec<usize>)> = Vec::new();
 
+    let mut testHash : HashMap<Entity, Vec<Entity>> = HashMap::new();
 
     for pos in positions.iter() {
         let id = commands.spawn(
@@ -67,6 +68,7 @@ pub fn generate_map_pathfinding_system(
             )).remove::<Selection>().id();
 
         adj.push((id, Vec::new()));
+        testHash.insert(id,Vec::new());
 
         cluster.0.push(id);
     }
@@ -76,8 +78,13 @@ pub fn generate_map_pathfinding_system(
     add_edge(&mut adj, 3, 1);
     add_edge(&mut adj, 3, 2);
     //add_edge(&mut adj,2,0);
+    add_edge_hash(&mut testHash,adj[0].0,adj[1].0);
+    add_edge_hash(&mut testHash,adj[1].0,adj[2].0);
+    add_edge_hash(&mut testHash,adj[3].0,adj[1].0);
+    add_edge_hash(&mut testHash,adj[3].0,adj[2].0);
 
     println!("{:?}", adj);
+    println!("{:?}", testHash);
     commands.insert_resource(DebugLineMap {
         val: adj
     });
@@ -90,6 +97,15 @@ fn add_edge(
 ) {
     adj[a].1.push(b);
     adj[b].1.push(a);
+}
+
+fn add_edge_hash(
+    mut _map : &mut HashMap<Entity, Vec<Entity>>,
+    a : Entity,
+    b : Entity,
+){
+    _map.get_mut(&a).unwrap().push(b);
+    _map.get_mut(&b).unwrap().push(a);
 }
 
 #[derive(Resource)]
