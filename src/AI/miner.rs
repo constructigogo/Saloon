@@ -1,10 +1,11 @@
 use std::process::id;
+
 use bevy::math::DVec2;
 use bevy::prelude::*;
 use bevy::utils::tracing::Instrument;
 use big_brain::prelude::*;
 
-use crate::{Destination, DestoType, DVec3, GalaxyCoordinate, Inventory, ItemType, SimPosition, m_to_system, TransferItemOrder, WeaponTarget};
+use crate::{Destination, DestoType, DVec3, GalaxyCoordinate, Inventory, ItemType, m_to_system, SimPosition, TransferItemOrder, WeaponTarget};
 use crate::space::anomalies::{AnomalyActive, AnomalyMining};
 use crate::space::asteroid::AsteroidTag;
 use crate::space::galaxy::around_pos;
@@ -34,7 +35,6 @@ pub fn move_to_anom_system(
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining), With<AnomalyActive>>,
     mut action: Query<(&Actor, &MoveToAnom, &mut ActionState)>,
 ) {
-
     action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
         {
             let getting = ship.get(*actor);
@@ -168,7 +168,7 @@ pub fn deposit_ore_action_system(
     stations: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory), With<AnchorableTag>>,
     mut action: Query<(&Actor, &DepositOre, &mut ActionState)>,
 ) {
-    action.par_for_each_mut(8,|(Actor(actor), order, mut state)|
+    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
         {
             let (id, coord, pos, inv_id, mut desto) = ships.get(*actor).unwrap();
             match *state {
@@ -194,10 +194,7 @@ pub fn deposit_ore_action_system(
                     match desto.0 {
                         DestoType::DPosition(target_pos) => {
                             if (pos.0.truncate() - target_pos.0.truncate()).length() < m_to_system(30.0) {
-                                //println!("try to deposit");
-                                //println!("deposit");
                                 let inv_ref = inventories.get(inv_id.0).unwrap();
-
                                 let item =
                                     is_type_in_inventory(
                                         &ItemType::ORE,
@@ -210,17 +207,14 @@ pub fn deposit_ore_action_system(
                                         *state = ActionState::Failure;
                                     }
                                     Some(item_id) => {
-                                        //println!("has item to deposit");
                                         let closest =
                                             get_closest_station(coord, pos, &stations);
 
                                         match closest.1 {
                                             None => {
-                                                //println!("cant deposit");
                                                 *state = ActionState::Failure;
                                             }
                                             Some(closest_id) => {
-                                                //println!("deposit");
                                                 let closest_inv = stations.get(closest_id).unwrap().3;
                                                 par_commands.command_scope(|mut commands| {
                                                     commands.entity(item_id).insert(
@@ -228,10 +222,8 @@ pub fn deposit_ore_action_system(
                                                             from: inv_id.0,
                                                             to: closest_inv.0,
                                                         });
-                                                    //println!("scheduled transfer");
                                                 });
                                                 *state = ActionState::Success;
-                                                //println!("deposit")
                                             }
                                         }
                                     }
@@ -246,9 +238,7 @@ pub fn deposit_ore_action_system(
                         DestoType::None => {}
                     }
                 }
-                ActionState::Success => {
-
-                }
+                ActionState::Success => {}
                 ActionState::Cancelled => {
                     *state = ActionState::Failure;
                 }

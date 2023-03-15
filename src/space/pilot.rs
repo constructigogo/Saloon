@@ -1,10 +1,11 @@
 use bevy::{ecs::component, prelude::*, transform::components};
 
 use crate::base::velocity::*;
+use crate::space::empire::Faction;
 
 pub fn spawn_new_pilot() -> PilotBundle {
     return PilotBundle {
-        _pilot: Pilot {
+        _pilot: PilotStats {
             level: 1,
             u_id: 0,
         },
@@ -17,7 +18,7 @@ pub fn spawn_new_pilot() -> PilotBundle {
 
 #[derive(Bundle)]
 pub struct PilotBundle {
-    pub _pilot: Pilot,
+    pub _pilot: PilotStats,
     pub respawn_base: RespawnBase,
     pub pilot_name: EName,
     pub pilot_faction: Faction,
@@ -29,11 +30,10 @@ pub struct RespawnBase(pub Option<Entity>);
 #[derive(Component, Deref, DerefMut)]
 pub struct EName(pub String);
 
-#[derive(Component, Deref, DerefMut)]
-pub struct Faction(pub u32);
+
 
 #[derive(Component)]
-pub struct Pilot {
+pub struct PilotStats {
     pub level: u8,
     pub u_id: u64,
 }

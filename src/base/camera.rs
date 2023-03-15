@@ -37,7 +37,7 @@ fn setup(mut commands: Commands) {
 
 pub fn camera_input(time: Res<Time>,
                 mut camera_zoom: ResMut<CameraZoom>,
-                mut camera_query: Query<(&mut Transform), With<Camera>>,
+                mut camera_query: Query<&mut Transform, With<Camera>>,
                 keys: Res<Input<ScanCode>>,
                 camera_id: Res<CameraID>,
                 settings: Res<GameplaySettings>,
@@ -47,7 +47,6 @@ pub fn camera_input(time: Res<Time>,
                 buttons: Res<Input<MouseButton>>) {
 
     //get the camera first before checking inputs
-    //also check if unique
     let got = camera_query.get_mut(camera_id.0);
     match got {
         Ok(mut tr) => {

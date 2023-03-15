@@ -1,16 +1,11 @@
-use std::default;
-
 use bevy::app::App;
 use bevy::input::mouse::MouseMotion;
-use bevy::log::LogPlugin;
 use bevy::math::DVec3;
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
-use bevy_editor_pls::egui::Label;
-use bevy_editor_pls::prelude::*;
 use bevy_mod_picking::*;
 use big_brain::prelude::*;
-use rand::{Rng, thread_rng};
+use rand::thread_rng;
 
 use space::galaxy::{GalaxyCoordinate, SolarSystem, SystemMap};
 use space::ship::pilot::*;
@@ -21,13 +16,13 @@ use crate::AI::miner::{DepositOre, Mine, MineAnom, MoveToAnom};
 use crate::base::*;
 use crate::base::timer::*;
 use crate::DestoType::TEntity;
-use crate::space::anomalies::{AnomalyInit, AnomalyMining, RegisterTo, spawn_anom};
-use crate::space::asteroid::{RessourceWell, spawn_asteroid};
-use crate::space::galaxy::{Rendered, SimPosition, m_to_system, au_to_system};
-use crate::space::inventory::{Inventory, ItemType, RegisterInventoryTo, spawn_inventory, spawn_item, transfer_item, TransferItemOrder, UpdateCachedVolume};
+use crate::space::anomalies::*;
+use crate::space::asteroid::*;
+use crate::space::galaxy::*;
+use crate::space::inventory::*;
 use crate::space::ship::*;
-use crate::space::station::{AnchorableBundle, spawn_station_at};
-use crate::space::weapon::{Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
+use crate::space::station::*;
+use crate::space::weapon::*;
 
 pub mod base;
 pub mod space;

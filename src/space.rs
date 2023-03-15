@@ -27,6 +27,7 @@ pub mod celestial;
 pub mod inventory;
 pub mod weapon;
 pub mod utils;
+pub mod empire;
 
 pub struct SpaceGamePlugins;
 

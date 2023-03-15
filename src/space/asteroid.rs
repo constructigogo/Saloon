@@ -13,18 +13,18 @@ pub struct RessourceWell {
 }
 
 #[derive(Bundle)]
-pub struct AsteroidBundle{
-    pub displayable : DisplayableGalaxyEntityBundle,
-    pub well : RessourceWell,
-    pub tag : AsteroidTag,
+pub struct AsteroidBundle {
+    pub displayable: DisplayableGalaxyEntityBundle,
+    pub well: RessourceWell,
+    pub tag: AsteroidTag,
 }
 
 pub fn asteroid_life_cycle_system(
-    mut commands : Commands,
-    mut asteroids : Query<(Entity, &RessourceWell), (With<AsteroidTag>)>
+    mut commands: Commands,
+    mut asteroids: Query<(Entity, &RessourceWell), (With<AsteroidTag>)>,
 ) {
     for (id, mut asteroid) in asteroids.iter_mut() {
-        if asteroid.volume <= 0.0{
+        if asteroid.volume <= 0.0 {
             commands.entity(id).despawn();
         }
     }
@@ -48,13 +48,13 @@ pub fn spawn_asteroid(at: SimPosition, galaxy: Entity) -> AsteroidBundle {
             },
             galaxy: GalaxyEntityBundle {
                 galaxy_coord: GalaxyCoordinate(galaxy),
-                simulation_position: around_pos(at,65.0),
+                simulation_position: around_pos(at, 65.0),
             },
         },
         well: RessourceWell {
             _type: ItemType::ORE,
-            volume: 10000.0
+            volume: 10000.0,
         },
-        tag: AsteroidTag
-    }
+        tag: AsteroidTag,
+    };
 }

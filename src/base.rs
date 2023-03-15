@@ -1,4 +1,4 @@
-use bevy::app::{App, PluginGroupBuilder};
+use bevy::app::*;
 use bevy::prelude::*;
 
 use self::camera::CameraControllerPlugin;
