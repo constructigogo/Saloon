@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::process::id;
 
 use bevy::prelude::*;
@@ -41,7 +42,7 @@ pub fn generate_map_pathfinding_system(
 
     let mut adj: Vec<(Entity, Vec<usize>)> = Vec::new();
 
-    let mut testHash : HashMap<Entity, Vec<Entity>> = HashMap::new();
+    let mut testHash: HashMap<Entity, Vec<Entity>> = HashMap::new();
 
     for pos in positions.iter() {
         let id = commands.spawn(
@@ -68,7 +69,7 @@ pub fn generate_map_pathfinding_system(
             )).remove::<Selection>().id();
 
         adj.push((id, Vec::new()));
-        testHash.insert(id,Vec::new());
+        testHash.insert(id, Vec::new());
 
         cluster.0.push(id);
     }
@@ -78,13 +79,21 @@ pub fn generate_map_pathfinding_system(
     add_edge(&mut adj, 3, 1);
     add_edge(&mut adj, 3, 2);
     //add_edge(&mut adj,2,0);
-    add_edge_hash(&mut testHash,adj[0].0,adj[1].0);
-    add_edge_hash(&mut testHash,adj[1].0,adj[2].0);
-    add_edge_hash(&mut testHash,adj[3].0,adj[1].0);
-    add_edge_hash(&mut testHash,adj[3].0,adj[2].0);
+    add_edge_hash(&mut testHash, adj[0].0, adj[1].0);
+    add_edge_hash(&mut testHash, adj[1].0, adj[2].0);
+    add_edge_hash(&mut testHash, adj[3].0, adj[1].0);
+    add_edge_hash(&mut testHash, adj[3].0, adj[2].0);
+
+
 
     println!("{:?}", adj);
     println!("{:?}", testHash);
+
+    let mut RouteList: HashMap<(Entity, Entity), Route> = HashMap::new();
+
+    get_route(&mut testHash,adj[0].0,adj[3].0);
+
+
     commands.insert_resource(DebugLineMap {
         val: adj
     });
@@ -100,13 +109,58 @@ fn add_edge(
 }
 
 fn add_edge_hash(
-    mut _map : &mut HashMap<Entity, Vec<Entity>>,
-    a : Entity,
-    b : Entity,
-){
+    mut _map: &mut HashMap<Entity, Vec<Entity>>,
+    a: Entity,
+    b: Entity,
+) {
     _map.get_mut(&a).unwrap().push(b);
     _map.get_mut(&b).unwrap().push(a);
 }
+
+fn get_route(
+    mut _map: &mut HashMap<Entity, Vec<Entity>>,
+    from: Entity,
+    to: Entity,
+) {
+    let mut visited: HashMap<Entity, bool> = HashMap::new();
+    let mut queue: VecDeque<Entity> = VecDeque::new();
+    let mut pred : HashMap<Entity,Option<Entity>> = HashMap::new();
+    let mut route: VecDeque<Entity> = VecDeque::new();
+
+    for key in _map.keys() {
+        visited.insert(*key, false);
+        pred.insert(*key,None);
+    }
+    visited.insert(from, true);
+    queue.push_back(from);
+
+    while !queue.is_empty() {
+        let current = queue.pop_front().unwrap();
+        for neigh in _map.get(&current).unwrap().iter() {
+            if !*visited.get(neigh).unwrap() {
+                visited.insert(*neigh, true);
+                pred.insert(*neigh,Some(current));
+                queue.push_back(*neigh);
+
+                if *neigh == to {
+                    println!("found");
+                    break;
+                }
+            }
+        }
+    }
+
+    let mut crawl = to;
+    route.push_front(crawl);
+    while *pred.get(&crawl).unwrap() != None {
+        route.push_front(pred.get(&crawl).unwrap().unwrap());
+        crawl = pred.get(&crawl).unwrap().unwrap();
+    }
+
+    println!("{:?}",route);
+
+}
+
 
 #[derive(Resource)]
 pub struct DebugLineMap {
@@ -115,16 +169,16 @@ pub struct DebugLineMap {
 
 pub fn line_debug(
     state: Res<State<ViewState>>,
-    _map : Res<DebugLineMap>,
+    _map: Res<DebugLineMap>,
     mut linesDraw: ResMut<DebugLines>,
-    query : Query<&Transform>
+    query: Query<&Transform>,
 ) {
-    if *state.current() == GALAXY  {
-        for lines in _map.val.iter(){
+    if *state.current() == GALAXY {
+        for lines in _map.val.iter() {
             let _self = query.get(lines.0).unwrap();
             for line in lines.1.iter() {
                 let to = query.get(_map.val[*line].0).unwrap();
-                linesDraw.line(_self.translation, to.translation,0.0);
+                linesDraw.line(_self.translation, to.translation, 0.0);
             }
         }
     }
