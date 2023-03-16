@@ -195,7 +195,7 @@ pub fn continue_route_system(
         let gate_pos = gate.get(*gate_from).unwrap();
 
         commands.entity(id).insert((
-            Destination(DestoType::DPosition(*gate_pos))
+            Destination(DestoType::DPosition((around_pos(*gate_pos,50.0))))
         )).remove::<ContinueRoute>();
     }
 }
