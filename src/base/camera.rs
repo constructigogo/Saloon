@@ -1,11 +1,11 @@
-use std::cmp::max;
+use std::cmp::{max, min};
 
 use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::MouseMotion}, prelude::*};
 use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::math::DVec2;
 use bevy_mod_picking::PickingCameraBundle;
 
-use crate::{DVec3, m_to_system, SimPosition};
+use crate::{Anomaly, CurrentSystemDisplay, DVec3, GalaxyCoordinate, GalaxyGateTag, m_to_system, SimPosition, UndockLoc};
 use crate::space::galaxy::RenderSystemEvent;
 
 use super::settings::{GameplaySettings, InputSettings};
@@ -40,8 +40,10 @@ fn setup(mut commands: Commands) {
 
 pub fn camera_input(time: Res<Time>,
                     windows: Res<Windows>,
+                    system: Res<CurrentSystemDisplay>,
                     mut camera_zoom: ResMut<CameraZoom>,
                     mut camera_query: Query<&mut SimPosition, With<Camera>>,
+                    poi_query : Query<(&GalaxyCoordinate,&Transform, &SimPosition),(Or<(With<GalaxyGateTag>,With<Anomaly>,With<UndockLoc>)>,Without<Camera>)>,
                     keys: Res<Input<ScanCode>>,
                     camera_id: Res<CameraID>,
                     settings: Res<GameplaySettings>,
@@ -56,6 +58,12 @@ pub fn camera_input(time: Res<Time>,
         Ok(mut tr) => {
             let window = windows.get_primary().unwrap();
             for ev in scroll_evr.iter() {
+
+
+
+
+
+
                 let incr: f64;
                 match ev.unit {
                     MouseScrollUnit::Line => {
@@ -68,14 +76,39 @@ pub fn camera_input(time: Res<Time>,
                     }
                 }
                 if let Some(_position) = window.cursor_position() {
+                    let cam_delta: DVec3;
+                    match system.0 {
+                        None => {
+                            let at = (_position-Vec2::new(window.width()/2.0, window.height()/2.0));
+                            cam_delta = DVec3::new(at.x as f64, at.y as f64, 0.0) * m_to_system(camera_zoom.0.exp()) ;
+                        }
+                        Some(id) => {
+                            let closest = poi_query.iter()
+                                .filter(|(coord, projection,pos)| coord.0==id)
+                                .min_by(|x,y|
+                                    (x.1.translation.truncate() + _position).length()
+                                        .partial_cmp(&(y.1.translation.truncate() + _position).length())
+                                        .unwrap()
+                                );
+
+                            match closest {
+                                None => {
+                                    let at = (_position-Vec2::new(window.width()/2.0, window.height()/2.0));
+                                    cam_delta = DVec3::new(at.x as f64, at.y as f64, 0.0) * m_to_system(camera_zoom.0.exp()) ;
+
+                                }
+                                Some((a,b,c)) => {
+                                    cam_delta = c.0-tr.0;
+                                },
+                            }
+
+                        }
+                    }
                     if camera_zoom.0 != 0.0 && camera_zoom.0 != 23.0 {
-                        let at = (_position-Vec2::new(window.width()/2.0, window.height()/2.0));
-                        let cam_delta: DVec3 = DVec3::new(at.x as f64, at.y as f64, 0.0) * m_to_system(camera_zoom.0.exp()) ;
 
                         let ratio = ((camera_zoom.0+incr).exp())/camera_zoom.0.exp();
 
-                        let lerped : DVec3 = DVec3::lerp(tr.0, tr.0+ cam_delta, 1.0-ratio);
-                        println!("mouse pos : {:?}, {:?}",at,ratio);
+                        let lerped : DVec3 = DVec3::lerp(tr.0, tr.0+cam_delta, 1.0-ratio);
                         tr.0 = lerped;
 
                     }
