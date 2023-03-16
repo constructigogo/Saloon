@@ -6,25 +6,25 @@ use bevy::prelude::*;
 use bevy::utils::hashbrown::*;
 use bevy_mod_picking::{PickableBundle, Selection};
 use bevy_prototype_debug_lines::DebugLines;
+use big_brain::prelude::*;
 
-use crate::{au_to_system, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, m_to_system, MaterialMesh2dBundle, Rendered, SimPosition, SolarSystem, SystemMap, UndockLoc, ViewState};
+use crate::{AnomalyMining, au_to_system, DepositOre, Destination, DestoType, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, m_to_system, MaterialMesh2dBundle, Mine, MineAnom, MoveToAnom, RegisterTo, Rendered, SimPosition, SolarSystem, spawn_anom, spawn_inventory, spawn_station_at, SystemMap, UndockingFrom, UndockLoc, ViewState, Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
+use crate::AI::utils::get_system_in_range;
+use crate::space::pilot::spawn_new_pilot;
 use crate::ViewState::GALAXY;
+use crate::warp::Warping;
 
 #[derive(Component, Deref)]
 pub struct TravelRoute {
-    route: VecDeque<Entity>,
+    pub route: VecDeque<Entity>,
 }
 
 #[derive(Component, Deref)]
 pub struct TravelTo(pub Entity);
 
-
-struct GalaxyMap {
-    //Every system
-    node: Vec<Entity>,
-    //lane between systems
-    lane: Vec<(Entity, Entity)>,
-    //routes: HashMap<HashRoute, Route>,
+#[derive(Resource)]
+pub struct GalaxyMap {
+    pub routes: HashMap<(Entity, Entity), VecDeque<Entity>>,
 }
 
 
@@ -33,18 +33,19 @@ pub fn generate_map_pathfinding_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut cluster: ResMut<SystemMap>,
+    mut map: ResMut<GalaxyMap>,
 ) {
     let positions: Vec<DVec3> = vec![
         DVec3::new(-150.0, -75.0, 0.0) * m_to_system(10.0),
         DVec3::new(0.0, 75.0, 0.0) * m_to_system(10.0),
         DVec3::new(150.0, -75.0, 0.0) * m_to_system(10.0),
         DVec3::new(150.0, 75.0, 0.0) * m_to_system(10.0),
+        DVec3::new(0.0, -75.0, 0.0) * m_to_system(10.0),
     ];
 
     let mut adj: Vec<(Entity, Vec<usize>)> = Vec::new();
-
-    let mut test_hash: HashMap<Entity, Vec<Entity>> = HashMap::new();
-    let mut pos_hash: HashMap<Entity,DVec3> = HashMap::new();
+    let mut adj_hash: HashMap<Entity, Vec<Entity>> = HashMap::new();
+    let mut pos_hash: HashMap<Entity, DVec3> = HashMap::new();
 
     for pos in positions.iter() {
         let id = commands.spawn(
@@ -71,8 +72,8 @@ pub fn generate_map_pathfinding_system(
             )).remove::<Selection>().id();
 
         adj.push((id, Vec::new()));
-        test_hash.insert(id, Vec::new());
-        pos_hash.insert(id,*pos);
+        adj_hash.insert(id, Vec::new());
+        pos_hash.insert(id, *pos);
 
         cluster.0.push(id);
     }
@@ -81,51 +82,196 @@ pub fn generate_map_pathfinding_system(
     add_edge(&mut adj, 1, 2);
     add_edge(&mut adj, 3, 1);
     add_edge(&mut adj, 3, 2);
+    add_edge(&mut adj, 2, 4);
     //add_edge(&mut adj,2,0);
-    add_edge_hash(&mut test_hash, adj[0].0, adj[1].0);
-    init_make_portal(&mut commands,&pos_hash,adj[0].0, adj[1].0);
-    add_edge_hash(&mut test_hash, adj[1].0, adj[2].0);
-    init_make_portal(&mut commands,&pos_hash,adj[1].0, adj[2].0);
-    add_edge_hash(&mut test_hash, adj[3].0, adj[1].0);
-    init_make_portal(&mut commands,&pos_hash,adj[3].0, adj[1].0);
-    add_edge_hash(&mut test_hash, adj[3].0, adj[2].0);
-    init_make_portal(&mut commands,&pos_hash,adj[3].0, adj[2].0);
+    add_edge_hash(&mut adj_hash, adj[0].0, adj[1].0);
+    init_make_portal(&mut commands, &pos_hash, adj[0].0, adj[1].0);
+    add_edge_hash(&mut adj_hash, adj[1].0, adj[2].0);
+    init_make_portal(&mut commands, &pos_hash, adj[1].0, adj[2].0);
+    add_edge_hash(&mut adj_hash, adj[3].0, adj[1].0);
+    init_make_portal(&mut commands, &pos_hash, adj[3].0, adj[1].0);
+    add_edge_hash(&mut adj_hash, adj[3].0, adj[2].0);
+    init_make_portal(&mut commands, &pos_hash, adj[3].0, adj[2].0);
+    add_edge_hash(&mut adj_hash, adj[2].0, adj[4].0);
+    init_make_portal(&mut commands, &pos_hash, adj[2].0, adj[4].0);
 
 
     println!("{:?}", adj);
-    println!("{:?}", test_hash);
+    println!("{:?}", adj_hash);
 
     //get_route(&mut test_hash, adj[0].0, adj[3].0);
 
     let mut all_routes: HashMap<(Entity, Entity), VecDeque<Entity>> = HashMap::new();
-    for key in test_hash.keys() {
-        for other in test_hash.keys() {
+    for key in adj_hash.keys() {
+        for other in adj_hash.keys() {
             if key != other {
                 all_routes.insert(
                     (*key, *other),
-                    get_route(&test_hash, *key, *other));
+                    get_route(&adj_hash, *key, *other));
             }
         }
     }
 
     println!("{:?}", all_routes);
 
+
     commands.insert_resource(DebugLineMap {
         val: adj
     });
+    map.routes = all_routes;
+}
+
+pub fn test_map_setup_fill(
+    mut commands: Commands,
+    cluster: Res<SystemMap>,
+    map: Res<GalaxyMap>,
+) {
+    let list = &cluster.0;
+
+    let center = commands.spawn((
+        spawn_station_at(SimPosition(DVec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }), list[0]),
+        UndockLoc,
+    )).id();
+    commands.spawn(spawn_inventory(center));
+
+    let anom = commands.spawn((
+        spawn_anom(SimPosition(DVec3 {
+            x: au_to_system(-10.0),
+            y: au_to_system(10.0),
+            z: 0.0,
+        }), list[1]),
+        AnomalyMining { tracked: Vec::new() },
+        RegisterTo(list[1]),
+    )).id();
+
+    let mine_in_anom = Steps::build()
+        .label("MineInAnom")
+        .step(MoveToAnom)
+        .step(MineAnom)
+        .step(DepositOre);
+
+
+    let ship = commands.spawn((
+        spawn_new_pilot(),
+        UndockingFrom(center),
+        WeaponBundle {
+            _weapon: Weapon {
+                _type: WeaponType::Mining,
+                config: WeaponConfig::RangeShort,
+                size: WeaponSize::Small,
+                tier: 1,
+                bank: 1,
+            },
+            target: WeaponTarget(None),
+            in_range: WeaponInRange(false),
+        },
+        TravelTo(list[1])
+    )).id();
+
+    //get_system_in_range(2,&GalaxyCoordinate(list[0]),&map);
 }
 
 #[derive(Component)]
+pub struct TakeGate {
+    from: Entity,
+    to: Entity,
+}
+
+pub fn take_gate_system(
+    mut commands: Commands,
+    gate: Query<(&GalaxyCoordinate,&SimPosition)>,
+    system: Query<(&SolarSystem)>,
+    query: Query<(Entity, &GalaxyCoordinate, &SimPosition, &TravelRoute, &TakeGate)>,
+) {
+    for (id, coord, pos, route, order) in &query {
+        let (t_coord, t_pos) = gate.get(order.to).unwrap();
+        commands.entity(id)
+            .insert((
+                GalaxyCoordinate(t_coord.0),
+                SimPosition(t_pos.0),
+            ))
+            .remove::<TakeGate>();
+    }
+}
+
+pub fn travel_route_system(
+    mut commands: Commands,
+    system: Query<(&SolarSystem)>,
+    mut query: Query<(Entity, &GalaxyCoordinate, &SimPosition, &Destination, &mut TravelRoute), (Without<Warping>, Without<TakeGate>)>,
+) {
+    for (id, coord, pos, dest, mut route) in &mut query {
+        match dest.0 {
+            DestoType::None => {}
+            DestoType::TEntity(_) => {}
+            DestoType::DPosition(target) => {
+                let dist: f64 = (pos.0 - target.0).length();
+                if dist <= m_to_system(100.0) {
+                    let travel_dir = route.route.pop_front().unwrap();
+                    println!("current dir {:?}",travel_dir);
+                    let (gate_from_id, gate_to_id) = system.get(coord.0).expect("system?").gates.get(&travel_dir).unwrap();
+                    commands.entity(id).insert(
+                        (
+                            TakeGate {
+                                from: *gate_from_id,
+                                to: *gate_to_id,
+                            }
+                        ));
+                }
+            }
+        }
+    }
+}
+
+pub fn on_travel_added(
+    mut commands: Commands,
+    map: Res<GalaxyMap>,
+    system: Query<(&SolarSystem)>,
+    gate: Query<(&SimPosition, &GalaxyGateTag)>,
+    mut query: Query<(Entity, &GalaxyCoordinate, &mut Destination, &TravelTo)>,
+) {
+    for (id, coord, mut desto, to) in query.iter_mut() {
+        let route = map.routes.get(&(coord.0, to.0));
+        match route {
+            None => {}
+            Some(val) => {
+                println!("move to");
+                println!("gates : {:?}, looking for {:?}", system.get(coord.0).expect("system???").gates, val[1]);
+                let (gate_from, gate_to) = system.get(coord.0).expect("system???").gates.get(&val[1]).expect("gate???????");
+
+                let mut copy_route = val.clone();
+                copy_route.pop_front();
+
+                commands.entity(id).insert(
+                    (
+                        TravelRoute { route: copy_route },
+                        Destination(
+                            DestoType::DPosition(*gate.get(*gate_from).unwrap().0)
+                        )
+                    )).remove::<TravelTo>();
+            }
+        }
+    }
+}
+
+
+#[derive(Component)]
 #[component(storage = "SparseSet")]
-pub struct RegisterGateToSystem(pub Entity);
+pub struct RegisterGateToSystem {
+    coord: Entity,
+    gate_to: Entity,
+}
 
 fn init_make_portal(
     mut commands: &mut Commands,
-    pos_list : &HashMap<Entity,DVec3> ,
+    pos_list: &HashMap<Entity, DVec3>,
     a: Entity,
     b: Entity,
 ) {
-    let dir : DVec3 = (*pos_list.get(&b).unwrap() - *pos_list.get(&a).unwrap()).normalize();
+    let dir: DVec3 = (*pos_list.get(&b).unwrap() - *pos_list.get(&a).unwrap()).normalize();
     let gA = commands.spawn((
         GalaxySpawnGateBundle {
             tag: GalaxyGateTag,
@@ -145,11 +291,10 @@ fn init_make_portal(
                 },
                 galaxy: GalaxyEntityBundle {
                     galaxy_coord: GalaxyCoordinate(a),
-                    simulation_position: SimPosition(dir*au_to_system(10.0)),
+                    simulation_position: SimPosition(dir * au_to_system(10.0)),
                 },
             },
         },
-        RegisterGateToSystem(a),
     )
     ).id();
 
@@ -172,30 +317,36 @@ fn init_make_portal(
                 },
                 galaxy: GalaxyEntityBundle {
                     galaxy_coord: GalaxyCoordinate(b),
-                    simulation_position: SimPosition(-dir*au_to_system(10.0)),
+                    simulation_position: SimPosition(-dir * au_to_system(10.0)),
                 },
             },
         },
-        RegisterGateToSystem(b),
-    )
-    ).id();
+    )).id();
 
     commands.entity(gA).insert((
-        GateDestination(gB)
+        GateDestination(b),
+        RegisterGateToSystem {
+            coord: a,
+            gate_to: gB,
+        },
     ));
     commands.entity(gB).insert((
-        GateDestination(gA)
+        GateDestination(a),
+        RegisterGateToSystem {
+            coord: b,
+            gate_to: gA,
+        },
     ));
 }
 
 pub fn register_gate_system(
-    mut commands : Commands,
-    mut systems : Query<(&mut SolarSystem)>,
-    query : Query<(Entity,&GateDestination, &RegisterGateToSystem), (Added<RegisterGateToSystem>)>,
-){
+    mut commands: Commands,
+    mut systems: Query<(&mut SolarSystem)>,
+    query: Query<(Entity, &GateDestination, &RegisterGateToSystem), (Added<RegisterGateToSystem>)>,
+) {
     for (id, desto, order) in query.iter() {
-        let mut sys = systems.get_mut(order.0).unwrap();
-        sys.gates.insert(desto.0,id);
+        let mut sys = systems.get_mut(order.coord).unwrap();
+        sys.gates.insert(desto.0, (id, order.gate_to));
         commands.entity(id).remove::<RegisterGateToSystem>();
     }
 }

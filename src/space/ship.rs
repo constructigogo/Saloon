@@ -136,11 +136,13 @@ pub fn undock_pilot_system(
                             thrust: 100000000,
                             angular: 25.15,
                         },
-                        move_towards: Destination(DestoType::DPosition(SimPosition(DVec3 {
+                        move_towards:
+                        Destination(DestoType::DPosition(SimPosition(DVec3 {
                             x: rng.gen_range(-0.0002..0.0002),
                             y: rng.gen_range(-0.00015..0.00015),
                             z: 0.0,
-                        }))),
+                        })))
+                        ,
                     },
                 }
             ).remove::<UndockingFrom>();

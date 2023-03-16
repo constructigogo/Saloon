@@ -5,6 +5,8 @@ use big_brain::BigBrainStage;
 use crate::AI::miner::*;
 
 pub mod miner;
+pub mod utils;
+pub mod general;
 
 pub struct AIPlugins;
 

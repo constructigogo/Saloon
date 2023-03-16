@@ -3,14 +3,14 @@ use bevy::prelude::*;
 use bevy::prelude::system_adapter::new;
 use bevy::utils::tracing::callsite::register;
 
+use crate::{generate_map_pathfinding_system, HashMap, transfer_item};
 use crate::camera::{camera_input, camera_system_view, CameraControllerPlugin};
-use crate::map::register_gate_system;
+use crate::map::{GalaxyMap, on_travel_added, register_gate_system, take_gate_system, test_map_setup_fill, travel_route_system};
 use crate::space::anomalies::*;
 use crate::space::asteroid::asteroid_life_cycle_system;
 use crate::space::inventory::{debug_items, register_inventory_to_ship_system, setup_world_inventory, update_cached_volume_system};
 use crate::space::project::project_to_camera;
 use crate::space::weapon::mining::resource_gathering_system;
-use crate::transfer_item;
 use crate::warp::{check_for_warp_system, init_warp_system, warp_movement_system};
 
 use self::galaxy::*;
@@ -53,6 +53,7 @@ impl Plugin for GalaxyPlugin {
             .insert_resource(SystemMap(Vec::new()))
             .insert_resource(GalaxyScale(0.000001))
             .insert_resource(CurrentSystemDisplay(None))
+            .insert_resource(GalaxyMap{ routes: Default::default() })
             .add_event::<HideGalaxyEvent>()
             .add_event::<HideSystemEvent>()
             .add_event::<RenderGalaxyEvent>()
@@ -73,7 +74,12 @@ impl Plugin for GalaxyPlugin {
             .add_system(remove_changed_system_view.before(generate_system_view))
             .add_system(flag_render_solar_system.before(generate_system_view))
             .add_system(generate_galaxy_view.after(hide_system_view))
-            .add_system(generate_system_view.after(hide_galaxy_view));
+            .add_system(generate_system_view.after(hide_galaxy_view))
+            .add_system(on_travel_added)
+            .add_system(travel_route_system)
+            .add_system(take_gate_system)
+            .add_startup_system(generate_map_pathfinding_system)
+            .add_startup_system(test_map_setup_fill.after(generate_map_pathfinding_system));
     }
 }
 

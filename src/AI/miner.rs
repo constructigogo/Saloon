@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use bevy::utils::tracing::Instrument;
 use big_brain::prelude::*;
 
-use crate::{Destination, DestoType, DVec3, GalaxyCoordinate, Inventory, ItemType, m_to_system, SimPosition, TransferItemOrder, WeaponTarget};
+use crate::{Destination, DestoType, DVec3, GalaxyCoordinate, Inventory, ItemType, m_to_system, RespawnBase, SimPosition, SolarSystem, TransferItemOrder, WeaponTarget};
+use crate::AI::utils::get_system_in_range;
 use crate::space::anomalies::{AnomalyActive, AnomalyMining};
 use crate::space::asteroid::AsteroidTag;
 use crate::space::galaxy::around_pos;
@@ -28,6 +29,36 @@ pub struct DepositOre;
 
 #[derive(Clone, Component, Debug, ScorerBuilder)]
 pub struct Mine;
+
+#[derive(Clone, Component, Debug, ActionBuilder)]
+pub struct MoveToClosestMiningSystem;
+
+pub fn move_to_closest_mining_system_action_system(
+    mut par_commands: ParallelCommands,
+    ship: Query<(Entity, &RespawnBase, &GalaxyCoordinate, &SimPosition, &Destination), Without<Warping>>,
+    system: Query<(Entity, &SolarSystem)>,
+    anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining), With<AnomalyActive>>,
+    mut action: Query<(&Actor, &MoveToClosestMiningSystem, &mut ActionState)>,
+) {
+    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
+        {
+            let getting = ship.get(*actor);
+            match getting {
+                Ok((id, base, coord, pos, mut desto)) => {
+                    match *state {
+                        ActionState::Requested => {
+
+                        }
+                        ActionState::Executing => {}
+                        ActionState::Cancelled => {}
+                        _ => {}
+                    }
+                }
+                Err(_) => {}
+            }
+        },
+    );
+}
 
 pub fn move_to_anom_system(
     mut par_commands: ParallelCommands,

@@ -48,7 +48,6 @@ fn main() {
         .add_plugins(AIPlugins)
         .add_plugin(TimerPlugin)
         //.add_system(frame_update)
-        .add_startup_system(generate_map_pathfinding_system)
         .add_system(line_debug)
     ;
     //.add_system(follow_mouse)

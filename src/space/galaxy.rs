@@ -45,7 +45,9 @@ pub struct GalaxyScale(pub f64);
 #[derive(Component, Default)]
 pub struct SolarSystem {
     pub anomalies: Vec<Entity>,
-    pub gates: HashMap<Entity,Entity>,
+
+    // k : destination system, v : (gate id, gate destination id)
+    pub gates: HashMap<Entity,(Entity,Entity)>,
     //pub size: f32, //probably useless we'll see
 }
 
