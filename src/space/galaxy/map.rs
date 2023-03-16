@@ -8,7 +8,7 @@ use bevy_mod_picking::{PickableBundle, Selection};
 use bevy_prototype_debug_lines::DebugLines;
 use big_brain::prelude::*;
 
-use crate::{AnomalyMining, au_to_system, DepositOre, Destination, DestoType, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, m_to_system, MaterialMesh2dBundle, Mine, MineAnom, MoveToAnom, RegisterTo, Rendered, SimPosition, SolarSystem, spawn_anom, spawn_inventory, spawn_station_at, SystemMap, UndockingFrom, UndockLoc, ViewState, Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
+use crate::{AnomalyMining, around_pos, au_to_system, DepositOre, Destination, DestoType, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, m_to_system, MaterialMesh2dBundle, Mine, MineAnom, MoveToAnom, RegisterTo, Rendered, SimPosition, SolarSystem, spawn_anom, spawn_inventory, spawn_station_at, SystemMap, UndockingFrom, UndockLoc, ViewState, Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
 use crate::AI::utils::get_system_in_range;
 use crate::space::pilot::spawn_new_pilot;
 use crate::ViewState::GALAXY;
@@ -169,7 +169,7 @@ pub fn test_map_setup_fill(
             target: WeaponTarget(None),
             in_range: WeaponInRange(false),
         },
-        TravelTo(list[1])
+        TravelTo(list[4])
     )).id();
 
     //get_system_in_range(2,&GalaxyCoordinate(list[0]),&map);
@@ -181,10 +181,29 @@ pub struct TakeGate {
     to: Entity,
 }
 
+#[derive(Component)]
+pub struct ContinueRoute;
+
+pub fn continue_route_system(
+    mut commands: Commands,
+    system: Query<(&SolarSystem)>,
+    gate: Query<(&SimPosition), With<GalaxyGateTag>>,
+    query: Query<(Entity, &GalaxyCoordinate, &SimPosition, &TravelRoute), With<ContinueRoute>>,
+) {
+    for (id, coord, pos, route) in query.iter() {
+        let (gate_from, _) = system.get(coord.0).unwrap().gates.get(&route.route[0]).unwrap();
+        let gate_pos = gate.get(*gate_from).unwrap();
+
+        commands.entity(id).insert((
+            Destination(DestoType::DPosition(*gate_pos))
+        )).remove::<ContinueRoute>();
+    }
+}
+
+
 pub fn take_gate_system(
     mut commands: Commands,
-    gate: Query<(&GalaxyCoordinate,&SimPosition)>,
-    system: Query<(&SolarSystem)>,
+    gate: Query<(&GalaxyCoordinate, &SimPosition)>,
     query: Query<(Entity, &GalaxyCoordinate, &SimPosition, &TravelRoute, &TakeGate)>,
 ) {
     for (id, coord, pos, route, order) in &query {
@@ -192,9 +211,17 @@ pub fn take_gate_system(
         commands.entity(id)
             .insert((
                 GalaxyCoordinate(t_coord.0),
-                SimPosition(t_pos.0),
+                around_pos(*t_pos, 250.0),
             ))
             .remove::<TakeGate>();
+
+        if route.route.len() > 0 {
+            commands.entity(id).insert((ContinueRoute));
+            println!("still has to travel to : {:?}", route.route);
+        } else {
+            println!("route finished");
+            commands.entity(id).remove::<TravelRoute>();
+        }
     }
 }
 
@@ -211,7 +238,7 @@ pub fn travel_route_system(
                 let dist: f64 = (pos.0 - target.0).length();
                 if dist <= m_to_system(100.0) {
                     let travel_dir = route.route.pop_front().unwrap();
-                    println!("current dir {:?}",travel_dir);
+                    println!("current dir {:?}", travel_dir);
                     let (gate_from_id, gate_to_id) = system.get(coord.0).expect("system?").gates.get(&travel_dir).unwrap();
                     commands.entity(id).insert(
                         (

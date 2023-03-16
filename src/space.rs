@@ -5,7 +5,7 @@ use bevy::utils::tracing::callsite::register;
 
 use crate::{generate_map_pathfinding_system, HashMap, transfer_item};
 use crate::camera::{camera_input, camera_system_view, CameraControllerPlugin};
-use crate::map::{GalaxyMap, on_travel_added, register_gate_system, take_gate_system, test_map_setup_fill, travel_route_system};
+use crate::map::{continue_route_system, GalaxyMap, on_travel_added, register_gate_system, take_gate_system, test_map_setup_fill, travel_route_system};
 use crate::space::anomalies::*;
 use crate::space::asteroid::asteroid_life_cycle_system;
 use crate::space::inventory::{debug_items, register_inventory_to_ship_system, setup_world_inventory, update_cached_volume_system};
@@ -77,6 +77,7 @@ impl Plugin for GalaxyPlugin {
             .add_system(generate_system_view.after(hide_galaxy_view))
             .add_system(on_travel_added)
             .add_system(travel_route_system)
+            .add_system(continue_route_system)
             .add_system(take_gate_system)
             .add_startup_system(generate_map_pathfinding_system)
             .add_startup_system(test_map_setup_fill.after(generate_map_pathfinding_system));
