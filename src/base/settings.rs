@@ -15,11 +15,15 @@ impl Plugin for GameSettingsPlugin {
 #[derive(Resource)]
 pub struct GameplaySettings {
     pub camera_keyboard_sensivity: f32,
+    pub camera_zoom_sensivity: f32,
 }
 
 impl Default for GameplaySettings {
     fn default() -> Self {
-        Self { camera_keyboard_sensivity: 0.5 }
+        Self {
+            camera_keyboard_sensivity: 0.5,
+            camera_zoom_sensivity: 1.6,
+        }
     }
 }
 

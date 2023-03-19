@@ -46,7 +46,7 @@ pub fn project_to_camera(camera_zoom: Res<CameraZoom>,
                         (transf.translation.y - ((camera.physical_viewport_size().unwrap().y - 48) / 2) as f32),
                         (transf.translation.y + ((camera.physical_viewport_size().unwrap().y - 48) / 2) as f32)),
                         */,
-                    z: 0.0,
+                    z: 1.0,
                 };
                 trans.translation = calc
             }

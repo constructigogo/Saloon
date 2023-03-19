@@ -149,7 +149,7 @@ pub fn take_gate_system(
                     println!("still has to travel to : {:?}", route.route);
                 } else {
                     println!("route finished");
-                    commands.entity(id).remove::<TravelRoute>();
+                    commands.entity(id).remove::<TravelRoute>().insert((Destination(DestoType::None)));
                 }
             }
             else {
