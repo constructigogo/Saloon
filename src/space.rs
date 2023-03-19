@@ -5,7 +5,7 @@ use bevy::time::FixedTimestep;
 use bevy::utils::tracing::callsite::register;
 
 use crate::{generate_map_pathfinding_system, HashMap, transfer_item};
-use crate::camera::{camera_input, camera_system_view, CameraControllerPlugin};
+use crate::camera::{camera_input, CameraControllerPlugin};
 use crate::gates::{register_gate_system, take_gate_added_system, take_gate_system};
 use crate::map::{GalaxyMap, test_map_setup_fill};
 use crate::route::{continue_route_system, on_travel_added, travel_route_system};
@@ -52,32 +52,14 @@ pub struct GalaxyPlugin;
 impl Plugin for GalaxyPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_state(ViewState::GALAXY)
             .insert_resource(SystemMap(Vec::new()))
             .insert_resource(GalaxyScale(0.000001))
-            .insert_resource(CurrentSystemDisplay(None))
             .insert_resource(GalaxyMap{ routes: Default::default() })
-            .add_event::<HideGalaxyEvent>()
-            .add_event::<HideSystemEvent>()
-            .add_event::<RenderGalaxyEvent>()
-            .add_event::<RenderSystemEvent>()
             .add_system(register_gate_system)
             .add_system(
                 project_to_camera
                     .after(camera_input)
-                    .before(generate_galaxy_view)
-                    .before(generate_system_view)
             )
-            .add_system(exit_system_view)
-            .add_system(click_enter_system_view.after(exit_system_view))
-            .add_system(hide_galaxy_view.after(click_enter_system_view))
-            .add_system(hide_system_view.after(generate_system_view))
-            .add_system(add_new_to_system_view.before(generate_system_view))
-            .add_system(add_changed_to_system_view.before(generate_system_view))
-            .add_system(remove_changed_system_view.before(generate_system_view))
-            .add_system(flag_render_solar_system.before(generate_system_view))
-            .add_system(generate_galaxy_view.after(hide_system_view))
-            .add_system(generate_system_view.after(hide_galaxy_view))
             .add_system(on_travel_added)
             .add_system(travel_route_system)
             .add_system(continue_route_system)

@@ -8,11 +8,10 @@ use bevy_mod_picking::{PickableBundle, Selection};
 use bevy_prototype_debug_lines::DebugLines;
 use big_brain::prelude::*;
 
-use crate::{AnomalyMining, around_pos, au_to_system, DepositOre, Destination, DestoType, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, m_to_system, MaterialMesh2dBundle, Mine, MineAnom, MoveToAnom, RegisterTo, Rendered, SimPosition, SolarSystem, spawn_anom, spawn_inventory, spawn_station_at, SystemMap, UndockingFrom, UndockLoc, ViewState, Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
+use crate::{AnomalyMining, around_pos, au_to_system, DepositOre, Destination, DestoType, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, m_to_system, MaterialMesh2dBundle, Mine, MineAnom, MoveToAnom, RegisterTo, SimPosition, SolarSystem, spawn_anom, spawn_inventory, spawn_station_at, SystemMap, UndockingFrom, UndockLoc, Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
 use crate::AI::utils::{get_system_in_range, spawn_mining_anom, spawn_station};
 use crate::gates::init_make_portal;
 use crate::space::pilot::spawn_new_pilot;
-use crate::ViewState::GALAXY;
 use crate::warp::Warping;
 
 #[derive(Component, Deref)]
@@ -37,11 +36,11 @@ pub fn generate_map_pathfinding_system(
     mut map: ResMut<GalaxyMap>,
 ) {
     let positions: Vec<DVec3> = vec![
-        DVec3::new(-150.0, -75.0, 0.0) * m_to_system(10.0),
-        DVec3::new(0.0, 75.0, 0.0) * m_to_system(10.0),
-        DVec3::new(150.0, -75.0, 0.0) * m_to_system(10.0),
-        DVec3::new(150.0, 75.0, 0.0) * m_to_system(10.0),
-        DVec3::new(0.0, -75.0, 0.0) * m_to_system(10.0),
+        DVec3::new(-150.0, -75.0, 0.0) * au_to_system(10.0),
+        DVec3::new(0.0, 75.0, 0.0) * au_to_system(10.0),
+        DVec3::new(150.0, -75.0, 0.0) * au_to_system(10.0),
+        DVec3::new(150.0, 75.0, 0.0) * au_to_system(10.0),
+        DVec3::new(0.0, -75.0, 0.0) * au_to_system(10.0),
     ];
 
     let mut adj: Vec<(Entity, Vec<usize>)> = Vec::new();
@@ -69,7 +68,6 @@ pub fn generate_map_pathfinding_system(
                     ..default()
                 },
                 PickableBundle::default(),
-                Rendered,
             )).remove::<Selection>().id();
 
         adj.push((id, Vec::new()));
@@ -142,7 +140,7 @@ pub fn test_map_setup_fill(
             x: au_to_system(-10.0),
             y: au_to_system(10.0),
             z: 0.0,
-        })
+        }),
     );
 
     let mine_in_anom = Steps::build()
@@ -240,17 +238,23 @@ pub struct DebugLineMap {
 }
 
 pub fn line_debug(
-    state: Res<State<ViewState>>,
-    _map: Res<DebugLineMap>,
     mut lines_draw: ResMut<DebugLines>,
-    query: Query<&Transform>,
+    system_query: Query<&SolarSystem>,
+    query: Query<(&GalaxyCoordinate, &Transform, &GateDestination)>,
 ) {
-    if *state.current() == GALAXY {
-        for lines in _map.val.iter() {
-            let _self = query.get(lines.0).unwrap();
-            for line in lines.1.iter() {
-                let to = query.get(_map.val[*line].0).unwrap();
-                lines_draw.line(_self.translation, to.translation, 0.0);
+    for (coord, trans, to_id) in &query {
+        let res = system_query.get(to_id.0);
+        match res {
+            Err(_) => {}
+            Ok(solar) => {
+                let gate_id = solar.gates.get(&coord.0);
+                match gate_id {
+                    None => {}
+                    Some((_from, _to)) => {
+                        let (to_coord, to_trans, _) = query.get(*_from).unwrap();
+                        lines_draw.line(trans.translation, to_trans.translation, 0.0);
+                    }
+                }
             }
         }
     }

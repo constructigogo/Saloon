@@ -23,6 +23,7 @@ use crate::space::anomalies::*;
 use crate::space::asteroid::*;
 use crate::space::galaxy::*;
 use crate::space::inventory::*;
+use crate::space::project::project_to_camera;
 use crate::space::ship::*;
 use crate::space::station::*;
 use crate::space::weapon::*;
@@ -48,7 +49,7 @@ fn main() {
         .add_plugins(AIPlugins)
         .add_plugin(TimerPlugin)
         //.add_system(frame_update)
-        .add_system(line_debug)
+        .add_system(line_debug.after(project_to_camera))
     ;
     //.add_system(follow_mouse)
 
@@ -110,7 +111,6 @@ fn setup(
                     ..default()
                 },
                 PickableBundle::default(),
-                Rendered,
             )).remove::<Selection>().id();
 
         cluster.0.push(id);

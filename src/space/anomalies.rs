@@ -66,7 +66,7 @@ pub fn spawn_anom(at: SimPosition, galaxy: Entity) -> AnomalyBundle {
                     translation: Vec3::ZERO,
                     ..default()
                 },
-                visibility: Visibility { is_visible: false },
+                visibility: Visibility { is_visible: true },
                 ..default()
             },
             galaxy: GalaxyEntityBundle {

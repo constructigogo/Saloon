@@ -43,7 +43,7 @@ pub(crate) fn init_make_portal(
                         translation: Vec3::ZERO,
                         ..default()
                     },
-                    visibility: Visibility { is_visible: false },
+                    visibility: Visibility { is_visible: true },
                     ..default()
                 },
                 galaxy: GalaxyEntityBundle {
@@ -69,7 +69,7 @@ pub(crate) fn init_make_portal(
                         translation: Vec3::ZERO,
                         ..default()
                     },
-                    visibility: Visibility { is_visible: false },
+                    visibility: Visibility { is_visible: true },
                     ..default()
                 },
                 galaxy: GalaxyEntityBundle {

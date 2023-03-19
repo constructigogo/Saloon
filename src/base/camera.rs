@@ -5,8 +5,7 @@ use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::math::DVec2;
 use bevy_mod_picking::PickingCameraBundle;
 
-use crate::{Anomaly, CurrentSystemDisplay, DVec3, GalaxyCoordinate, GalaxyGateTag, m_to_system, RenderGalaxyEvent, SimPosition, UndockLoc};
-use crate::space::galaxy::RenderSystemEvent;
+use crate::{Anomaly, DVec3, GalaxyCoordinate, GalaxyGateTag, m_to_system, SimPosition, UndockLoc};
 
 use super::settings::{GameplaySettings, InputSettings};
 
@@ -22,8 +21,6 @@ impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup);
         app.add_system(camera_input);
-        app.add_system(camera_system_view);
-        app.add_system(camera_galaxy_view);
     }
 }
 
@@ -41,7 +38,6 @@ fn setup(mut commands: Commands) {
 
 pub fn camera_input(time: Res<Time>,
                     windows: Res<Windows>,
-                    system: Res<CurrentSystemDisplay>,
                     camera_id: Res<CameraID>,
                     mut camera_zoom: ResMut<CameraZoom>,
                     mut camera_query: Query<&mut SimPosition, With<Camera>>,
@@ -73,6 +69,11 @@ pub fn camera_input(time: Res<Time>,
                 if let Some(_position) = window.cursor_position() {
                     if camera_zoom.0 != 0.0 && camera_zoom.0 != 23.0 {
                         let cam_delta: DVec3;
+                        let at = (_position - Vec2::new(window.width() / 2.0, window.height() / 2.0));
+                        cam_delta = DVec3::new(at.x as f64, at.y as f64, 0.0) * m_to_system(camera_zoom.0.exp());
+
+                        /*
+
                         match system.0 {
                             None => {
                                 let at = (_position - Vec2::new(window.width() / 2.0, window.height() / 2.0));
@@ -102,6 +103,7 @@ pub fn camera_input(time: Res<Time>,
                                 }
                             }
                         }
+                         */
                         let ratio = ((camera_zoom.0 + incr).exp()) / camera_zoom.0.exp();
 
                         let lerped: DVec3 = DVec3::lerp(tr.0, tr.0 + cam_delta, 1.0 - ratio);
@@ -167,6 +169,7 @@ pub fn camera_input(time: Res<Time>,
     }
 }
 
+/*
 pub fn camera_system_view(ev: EventReader<RenderSystemEvent>,
                           mut zoom: ResMut<CameraZoom>,
 ) {
@@ -185,3 +188,4 @@ pub fn camera_galaxy_view(ev: EventReader<RenderGalaxyEvent>,
         camera_query.get_mut(camera_id.0).unwrap().0 = DVec3::ZERO;
     }
 }
+ */

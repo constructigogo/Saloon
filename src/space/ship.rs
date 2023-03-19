@@ -123,7 +123,7 @@ pub fn undock_pilot_system(
                             translation: Vec3::ZERO,
                             ..default()
                         },
-                        visibility: Visibility { is_visible: false },
+                        visibility: Visibility { is_visible: true },
                         ..default()
                     },
                     movable: MovableBundle {

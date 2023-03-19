@@ -24,7 +24,7 @@ pub fn spawn_station_at(at : SimPosition, galaxy : Entity ) -> AnchorableBundle{
                 translation: Vec3::ZERO,
                 ..default()
             },
-            visibility: Visibility { is_visible: false },
+            visibility: Visibility { is_visible: true },
             ..default()
         },
         sim_pos: at.clone(),
