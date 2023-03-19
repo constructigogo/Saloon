@@ -60,7 +60,6 @@ pub fn check_for_warp_system(
             ship::DestoType::TEntity(_) => {}
             ship::DestoType::None => {}
         }
-        println!("toggle warp");
     }
 }
 
@@ -176,7 +175,7 @@ pub fn warp_movement_system(
 
 
                             if t <= 0.0 {
-                                println!("dist {:?}", (target.0-pos.0).length()/0.000001);
+                                //println!("dist {:?}", (target.0-pos.0).length()/0.000001);
                                 commands.entity(id).remove::<Warping>();
                             } else {
                                 //pos.0 += dir * m_to_system(v * time.delta_seconds_f64());

@@ -1,4 +1,6 @@
 pub mod map;
+pub mod gates;
+pub mod route;
 
 use std::f64::consts::PI;
 use std::ops::Range;

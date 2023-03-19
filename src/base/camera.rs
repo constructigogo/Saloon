@@ -5,7 +5,7 @@ use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::math::DVec2;
 use bevy_mod_picking::PickingCameraBundle;
 
-use crate::{Anomaly, CurrentSystemDisplay, DVec3, GalaxyCoordinate, GalaxyGateTag, m_to_system, SimPosition, UndockLoc};
+use crate::{Anomaly, CurrentSystemDisplay, DVec3, GalaxyCoordinate, GalaxyGateTag, m_to_system, RenderGalaxyEvent, SimPosition, UndockLoc};
 use crate::space::galaxy::RenderSystemEvent;
 
 use super::settings::{GameplaySettings, InputSettings};
@@ -23,6 +23,7 @@ impl Plugin for CameraControllerPlugin {
         app.add_startup_system(setup);
         app.add_system(camera_input);
         app.add_system(camera_system_view);
+        app.add_system(camera_galaxy_view);
     }
 }
 
@@ -41,11 +42,11 @@ fn setup(mut commands: Commands) {
 pub fn camera_input(time: Res<Time>,
                     windows: Res<Windows>,
                     system: Res<CurrentSystemDisplay>,
+                    camera_id: Res<CameraID>,
                     mut camera_zoom: ResMut<CameraZoom>,
                     mut camera_query: Query<&mut SimPosition, With<Camera>>,
                     poi_query: Query<(&GalaxyCoordinate, &Transform, &SimPosition), (Or<(With<Anomaly>, With<GalaxyGateTag>, With<UndockLoc>)>, Without<Camera>)>,
                     keys: Res<Input<ScanCode>>,
-                    camera_id: Res<CameraID>,
                     settings: Res<GameplaySettings>,
                     input_settings: Res<InputSettings>,
                     mut motion_evr: EventReader<MouseMotion>,
@@ -171,5 +172,16 @@ pub fn camera_system_view(ev: EventReader<RenderSystemEvent>,
 ) {
     if !ev.is_empty() {
         zoom.0 = 23.0;
+    }
+}
+
+pub fn camera_galaxy_view(ev: EventReader<RenderGalaxyEvent>,
+                          camera_id: Res<CameraID>,
+                          mut zoom: ResMut<CameraZoom>,
+                          mut camera_query: Query<&mut SimPosition, With<Camera>>,
+) {
+    if !ev.is_empty() {
+        zoom.0 = 1.0;
+        camera_query.get_mut(camera_id.0).unwrap().0 = DVec3::ZERO;
     }
 }

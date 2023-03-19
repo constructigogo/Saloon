@@ -9,7 +9,8 @@ use bevy_prototype_debug_lines::DebugLines;
 use big_brain::prelude::*;
 
 use crate::{AnomalyMining, around_pos, au_to_system, DepositOre, Destination, DestoType, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, m_to_system, MaterialMesh2dBundle, Mine, MineAnom, MoveToAnom, RegisterTo, Rendered, SimPosition, SolarSystem, spawn_anom, spawn_inventory, spawn_station_at, SystemMap, UndockingFrom, UndockLoc, ViewState, Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
-use crate::AI::utils::get_system_in_range;
+use crate::AI::utils::{get_system_in_range, spawn_mining_anom, spawn_station};
+use crate::gates::init_make_portal;
 use crate::space::pilot::spawn_new_pilot;
 use crate::ViewState::GALAXY;
 use crate::warp::Warping;
@@ -128,25 +129,21 @@ pub fn test_map_setup_fill(
 ) {
     let list = &cluster.0;
 
-    let center = commands.spawn((
-        spawn_station_at(SimPosition(DVec3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }), list[0]),
-        UndockLoc,
-    )).id();
-    commands.spawn(spawn_inventory(center));
+    let center = spawn_station(
+        &mut commands,
+        GalaxyCoordinate(list[0]),
+        SimPosition(DVec3::ZERO),
+    );
 
-    let anom = commands.spawn((
-        spawn_anom(SimPosition(DVec3 {
+    let anom = spawn_mining_anom(
+        &mut commands,
+        GalaxyCoordinate(list[0]),
+        SimPosition(DVec3 {
             x: au_to_system(-10.0),
             y: au_to_system(10.0),
             z: 0.0,
-        }), list[1]),
-        AnomalyMining { tracked: Vec::new() },
-        RegisterTo(list[1]),
-    )).id();
+        })
+    );
 
     let mine_in_anom = Steps::build()
         .label("MineInAnom")
@@ -155,227 +152,26 @@ pub fn test_map_setup_fill(
         .step(DepositOre);
 
 
-    let ship = commands.spawn((
-        spawn_new_pilot(),
-        UndockingFrom(center),
-        WeaponBundle {
-            _weapon: Weapon {
-                _type: WeaponType::Mining,
-                config: WeaponConfig::RangeShort,
-                size: WeaponSize::Small,
-                tier: 1,
-                bank: 1,
+    for _ in 0..100 {
+        let ship = commands.spawn((
+            spawn_new_pilot(),
+            UndockingFrom(center),
+            WeaponBundle {
+                _weapon: Weapon {
+                    _type: WeaponType::Mining,
+                    config: WeaponConfig::RangeShort,
+                    size: WeaponSize::Small,
+                    tier: 1,
+                    bank: 1,
+                },
+                target: WeaponTarget(None),
+                in_range: WeaponInRange(false),
             },
-            target: WeaponTarget(None),
-            in_range: WeaponInRange(false),
-        },
-        TravelTo(list[4])
-    )).id();
+            TravelTo(list[4])
+        )).id();
+    }
 
     //get_system_in_range(2,&GalaxyCoordinate(list[0]),&map);
-}
-
-#[derive(Component)]
-pub struct TakeGate {
-    from: Entity,
-    to: Entity,
-}
-
-#[derive(Component)]
-pub struct ContinueRoute;
-
-pub fn continue_route_system(
-    mut commands: Commands,
-    system: Query<(&SolarSystem)>,
-    gate: Query<(&SimPosition), With<GalaxyGateTag>>,
-    query: Query<(Entity, &GalaxyCoordinate, &SimPosition, &TravelRoute), With<ContinueRoute>>,
-) {
-    for (id, coord, pos, route) in query.iter() {
-        let (gate_from, _) = system.get(coord.0).unwrap().gates.get(&route.route[0]).unwrap();
-        let gate_pos = gate.get(*gate_from).unwrap();
-
-        commands.entity(id).insert((
-            Destination(DestoType::DPosition((around_pos(*gate_pos,50.0))))
-        )).remove::<ContinueRoute>();
-    }
-}
-
-
-pub fn take_gate_system(
-    mut commands: Commands,
-    gate: Query<(&GalaxyCoordinate, &SimPosition)>,
-    query: Query<(Entity, &GalaxyCoordinate, &SimPosition, &TravelRoute, &TakeGate)>,
-) {
-    for (id, coord, pos, route, order) in &query {
-        let (t_coord, t_pos) = gate.get(order.to).unwrap();
-        commands.entity(id)
-            .insert((
-                GalaxyCoordinate(t_coord.0),
-                around_pos(*t_pos, 250.0),
-            ))
-            .remove::<TakeGate>();
-
-        if route.route.len() > 0 {
-            commands.entity(id).insert((ContinueRoute));
-            println!("still has to travel to : {:?}", route.route);
-        } else {
-            println!("route finished");
-            commands.entity(id).remove::<TravelRoute>();
-        }
-    }
-}
-
-pub fn travel_route_system(
-    mut commands: Commands,
-    system: Query<(&SolarSystem)>,
-    mut query: Query<(Entity, &GalaxyCoordinate, &SimPosition, &Destination, &mut TravelRoute), (Without<Warping>, Without<TakeGate>)>,
-) {
-    for (id, coord, pos, dest, mut route) in &mut query {
-        match dest.0 {
-            DestoType::None => {}
-            DestoType::TEntity(_) => {}
-            DestoType::DPosition(target) => {
-                let dist: f64 = (pos.0 - target.0).length();
-                if dist <= m_to_system(100.0) {
-                    let travel_dir = route.route.pop_front().unwrap();
-                    println!("current dir {:?}", travel_dir);
-                    let (gate_from_id, gate_to_id) = system.get(coord.0).expect("system?").gates.get(&travel_dir).unwrap();
-                    commands.entity(id).insert(
-                        (
-                            TakeGate {
-                                from: *gate_from_id,
-                                to: *gate_to_id,
-                            }
-                        ));
-                }
-            }
-        }
-    }
-}
-
-pub fn on_travel_added(
-    mut commands: Commands,
-    map: Res<GalaxyMap>,
-    system: Query<(&SolarSystem)>,
-    gate: Query<(&SimPosition, &GalaxyGateTag)>,
-    mut query: Query<(Entity, &GalaxyCoordinate, &mut Destination, &TravelTo)>,
-) {
-    for (id, coord, mut desto, to) in query.iter_mut() {
-        let route = map.routes.get(&(coord.0, to.0));
-        match route {
-            None => {}
-            Some(val) => {
-                println!("move to");
-                println!("gates : {:?}, looking for {:?}", system.get(coord.0).expect("system???").gates, val[1]);
-                let (gate_from, gate_to) = system.get(coord.0).expect("system???").gates.get(&val[1]).expect("gate???????");
-
-                let mut copy_route = val.clone();
-                copy_route.pop_front();
-
-                commands.entity(id).insert(
-                    (
-                        TravelRoute { route: copy_route },
-                        Destination(
-                            DestoType::DPosition(*gate.get(*gate_from).unwrap().0)
-                        )
-                    )).remove::<TravelTo>();
-            }
-        }
-    }
-}
-
-
-#[derive(Component)]
-#[component(storage = "SparseSet")]
-pub struct RegisterGateToSystem {
-    coord: Entity,
-    gate_to: Entity,
-}
-
-fn init_make_portal(
-    mut commands: &mut Commands,
-    pos_list: &HashMap<Entity, DVec3>,
-    a: Entity,
-    b: Entity,
-) {
-    let dir: DVec3 = (*pos_list.get(&b).unwrap() - *pos_list.get(&a).unwrap()).normalize();
-    let gA = commands.spawn((
-        GalaxySpawnGateBundle {
-            tag: GalaxyGateTag,
-            disp: DisplayableGalaxyEntityBundle {
-                display: SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgb(1.0, 1.0, 1.0),
-                        custom_size: Some(Vec2::new(8.0, 8.0)),
-                        ..default()
-                    },
-                    transform: Transform {
-                        translation: Vec3::ZERO,
-                        ..default()
-                    },
-                    visibility: Visibility { is_visible: false },
-                    ..default()
-                },
-                galaxy: GalaxyEntityBundle {
-                    galaxy_coord: GalaxyCoordinate(a),
-                    simulation_position: SimPosition(dir * au_to_system(10.0)),
-                },
-            },
-        },
-    )
-    ).id();
-
-    let gB = commands.spawn((
-        GalaxySpawnGateBundle {
-            tag: GalaxyGateTag,
-            disp: DisplayableGalaxyEntityBundle {
-                display: SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgb(1.0, 1.0, 1.0),
-                        custom_size: Some(Vec2::new(8.0, 8.0)),
-                        ..default()
-                    },
-                    transform: Transform {
-                        translation: Vec3::ZERO,
-                        ..default()
-                    },
-                    visibility: Visibility { is_visible: false },
-                    ..default()
-                },
-                galaxy: GalaxyEntityBundle {
-                    galaxy_coord: GalaxyCoordinate(b),
-                    simulation_position: SimPosition(-dir * au_to_system(10.0)),
-                },
-            },
-        },
-    )).id();
-
-    commands.entity(gA).insert((
-        GateDestination(b),
-        RegisterGateToSystem {
-            coord: a,
-            gate_to: gB,
-        },
-    ));
-    commands.entity(gB).insert((
-        GateDestination(a),
-        RegisterGateToSystem {
-            coord: b,
-            gate_to: gA,
-        },
-    ));
-}
-
-pub fn register_gate_system(
-    mut commands: Commands,
-    mut systems: Query<(&mut SolarSystem)>,
-    query: Query<(Entity, &GateDestination, &RegisterGateToSystem), (Added<RegisterGateToSystem>)>,
-) {
-    for (id, desto, order) in query.iter() {
-        let mut sys = systems.get_mut(order.coord).unwrap();
-        sys.gates.insert(desto.0, (id, order.gate_to));
-        commands.entity(id).remove::<RegisterGateToSystem>();
-    }
 }
 
 fn add_edge(
@@ -437,7 +233,6 @@ fn get_route(
     }
     return route;
 }
-
 
 #[derive(Resource)]
 pub struct DebugLineMap {
