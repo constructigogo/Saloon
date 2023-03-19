@@ -60,7 +60,7 @@ pub fn camera_input(time: Res<Time>,
                 let incr: f64;
                 match ev.unit {
                     MouseScrollUnit::Line => {
-                        incr = ((ev.y*settings.camera_zoom_sensivity) / 5.0) as f64;
+                        incr = ((ev.y*settings.camera_zoom_sensitivity) / 5.0) as f64;
                         //println!("camera center : {:?}",)
                     }
                     MouseScrollUnit::Pixel => {
