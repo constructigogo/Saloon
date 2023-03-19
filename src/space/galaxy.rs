@@ -19,7 +19,7 @@ pub fn m_to_system(from: f64) -> f64 {
 }
 
 pub fn au_to_system(from : f64) -> f64 {
-    return from * 150000.0;
+    return from * 1500.0;
 }
 
 pub fn around_pos(pos: SimPosition, radius: f64) -> SimPosition {

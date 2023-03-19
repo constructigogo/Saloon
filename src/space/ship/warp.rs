@@ -8,7 +8,7 @@ use crate::space::galaxy::au_to_system;
 use crate::space::ship;
 use crate::warp::WarpPhase::*;
 
-const AU: f64 = 150_000_000_000.0;
+const AU: f64 = 1_500_000_000.0;
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
@@ -53,7 +53,7 @@ pub fn check_for_warp_system(
         match desto.0 {
             ship::DestoType::DPosition(target) => {
                 let dist_left: f64 = (pos.0 - target.0).length();
-                if dist_left > m_to_system(100000.0) {
+                if dist_left > m_to_system(10000.0) {
                     commands.entity(id).insert((InitWarp));
                 }
             }
@@ -70,7 +70,7 @@ pub fn init_warp_system(
 ) {
     for (id, pos, mass, thruster) in query.iter() {
         commands.entity(id).insert((
-            Warping::build(5.0, pos.0)
+            Warping::build(3.0, pos.0)
         )).remove::<InitWarp>();
     }
 }
@@ -98,7 +98,7 @@ pub fn warp_movement_system(
 
                 let accel_dist = AU;
                 let decel_dist = (k * AU) / j;
-                let cruis_dist = (dist / 150000.0) * AU - accel_dist - accel_dist;
+                let cruis_dist = (dist / au_to_system(1.0)) * AU - accel_dist - accel_dist;
 
                 let min_dist = m_to_system(accel_dist + accel_dist);
 
