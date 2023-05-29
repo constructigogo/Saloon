@@ -40,23 +40,20 @@ pub fn move_to_closest_mining_system_action_system(
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining), With<AnomalyActive>>,
     mut action: Query<(&Actor, &MoveToClosestMiningSystem, &mut ActionState)>,
 ) {
-    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
-        {
-            let getting = ship.get(*actor);
-            match getting {
-                Ok((id, base, coord, pos, mut desto)) => {
-                    match *state {
-                        ActionState::Requested => {
-
-                        }
-                        ActionState::Executing => {}
-                        ActionState::Cancelled => {}
-                        _ => {}
-                    }
+    action.par_iter().for_each_mut(|(Actor(actor), order, mut state)| {
+        let getting = ship.get(*actor);
+        match getting {
+            Ok((id, base, coord, pos, mut desto)) => {
+                match *state {
+                    ActionState::Requested => {}
+                    ActionState::Executing => {}
+                    ActionState::Cancelled => {}
+                    _ => {}
                 }
-                Err(_) => {}
             }
-        },
+            Err(_) => {}
+        }
+    },
     );
 }
 
@@ -66,60 +63,57 @@ pub fn move_to_anom_system(
     anoms: Query<(Entity, &GalaxyCoordinate, &SimPosition, &AnomalyMining), With<AnomalyActive>>,
     mut action: Query<(&Actor, &MoveToAnom, &mut ActionState)>,
 ) {
-    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
-        {
-            let getting = ship.get(*actor);
-            match getting {
-                Ok((id, coord, pos, mut desto)) => {
-                    match *state {
-                        ActionState::Requested => {
-                            let (closest, anom) = get_closest_anom_pos(
-                                coord,
-                                pos,
-                                &anoms,
-                            );
+    action.par_iter_mut().for_each_mut(|(Actor(actor), order, mut state)| {
+        let getting = ship.get(*actor);
+        match getting {
+            Ok((id, coord, pos, mut desto)) => {
+                match *state {
+                    ActionState::Requested => {
+                        let (closest, anom) = get_closest_anom_pos(
+                            coord,
+                            pos,
+                            &anoms,
+                        );
 
-                            match anom {
-                                None => {
-                                    *state = ActionState::Failure;
-                                }
-                                Some(anom_value) => {
-                                    par_commands.command_scope(|mut commands| {
-                                        commands.entity(id).insert((MiningInAnom(anom_value)));
-                                        if (pos.0.truncate() - closest.truncate()).length() > 0.00005 {
-                                            commands.entity(id).insert(Destination(
-                                                DestoType::DPosition(around_pos(closest, 15.0))
-                                            ));
-                                            *state = ActionState::Executing;
-                                        }
-                                    });
-                                }
+                        match anom {
+                            None => {
+                                *state = ActionState::Failure;
+                            }
+                            Some(anom_value) => {
+                                par_commands.command_scope(|mut commands| {
+                                    commands.entity(id).insert((MiningInAnom(anom_value)));
+                                    if (pos.0.truncate() - closest.truncate()).length() > 0.00005 {
+                                        commands.entity(id).insert(Destination(
+                                            DestoType::DPosition(around_pos(closest, 15.0))
+                                        ));
+                                        *state = ActionState::Executing;
+                                    }
+                                });
                             }
                         }
-                        ActionState::Executing => {
-                            match desto.0 {
-                                DestoType::DPosition(target_pos) => {
-                                    if (pos.0.truncate() - target_pos.0.truncate()).length() < m_to_system(30.0) {
-                                        *state = ActionState::Success;
-                                    }
-                                }
-                                DestoType::TEntity(id) => {
-                                    if (pos.0 - id.0).length() < m_to_system(30.0) {
-                                        *state = ActionState::Success;
-                                    }
-                                }
-                                DestoType::None => {}
-                            }
-                        }
-                        ActionState::Cancelled => {
-                            *state = ActionState::Failure;
-                        }
-                        _ => {}
                     }
+                    ActionState::Executing => {
+                        match desto.0 {
+                            DestoType::DPosition(target_pos) => {
+                                if (pos.0.truncate() - target_pos.0.truncate()).length() < m_to_system(30.0) {
+                                    *state = ActionState::Success;
+                                }
+                            }
+                            DestoType::TEntity(id) => {
+                                todo!();
+                            }
+                            DestoType::None => {}
+                        }
+                    }
+                    ActionState::Cancelled => {
+                        *state = ActionState::Failure;
+                    }
+                    _ => {}
                 }
-                Err(_) => {}
             }
-        },
+            Err(_) => {}
+        }
+    },
     );
 }
 
@@ -131,63 +125,62 @@ pub fn mine_anom_system(
     inventories: Query<&Inventory>,
     mut action: Query<(&Actor, &MineAnom, &mut ActionState)>,
 ) {
-    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
-        {
-            let (id, coord, pos, inv, anom, mut target, mut desto) = ship.get(*actor).unwrap();
-            match *state {
-                ActionState::Requested => {
-                    let result =
-                        get_closest_asteroid_in_anom(
-                            &pos,
-                            anom.0,
-                            &asteroid,
-                            &anoms);
+    action.par_iter_mut().for_each_mut(|(Actor(actor), order, mut state)| {
+        let (id, coord, pos, inv, anom, mut target, mut desto) = ship.get(*actor).unwrap();
+        match *state {
+            ActionState::Requested => {
+                let result =
+                    get_closest_asteroid_in_anom(
+                        &pos,
+                        anom.0,
+                        &asteroid,
+                        &anoms);
 
-                    match result.1 {
-                        None => {
-                            *state = ActionState::Failure;
-                        }
-                        Some(asteroid_id) => {
+                match result.1 {
+                    None => {
+                        *state = ActionState::Failure;
+                    }
+                    Some(asteroid_id) => {
+                        par_commands.command_scope(|mut commands| {
+                            commands.entity(id)
+                                .insert(WeaponTarget(Some(asteroid_id)))
+                                .insert(Destination(DestoType::DPosition(around_pos(result.0, 15.0))))
+                            ;
+                        });
+                        println!("here");
+                        *state = ActionState::Executing;
+                    }
+                }
+            }
+            ActionState::Executing => {
+                let inv_ref = inventories.get(inv.0).unwrap();
+                match target.0 {
+                    None => {
+                        *state = ActionState::Requested;
+                    }
+                    Some(_) => {}
+                }
+
+                match inv_ref.max_volume {
+                    None => {}
+                    Some(max_vol) => {
+                        if inv_ref.cached_current_volume > 0.95 * max_vol {
                             par_commands.command_scope(|mut commands| {
                                 commands.entity(id)
-                                    .insert(WeaponTarget(Some(asteroid_id)))
-                                    .insert(Destination(DestoType::DPosition(around_pos(result.0, 15.0))))
+                                    .insert(WeaponTarget(None))
                                 ;
                             });
-                            println!("here");
-                            *state = ActionState::Executing;
+                            *state = ActionState::Success;
                         }
                     }
                 }
-                ActionState::Executing => {
-                    let inv_ref = inventories.get(inv.0).unwrap();
-                    match target.0 {
-                        None => {
-                            *state = ActionState::Requested;
-                        }
-                        Some(_) => {}
-                    }
-
-                    match inv_ref.max_volume {
-                        None => {}
-                        Some(max_vol) => {
-                            if inv_ref.cached_current_volume > 0.95 * max_vol {
-                                par_commands.command_scope(|mut commands| {
-                                    commands.entity(id)
-                                        .insert(WeaponTarget(None))
-                                    ;
-                                });
-                                *state = ActionState::Success;
-                            }
-                        }
-                    }
-                }
-                ActionState::Cancelled => {
-                    *state = ActionState::Failure;
-                }
-                _ => {}
             }
-        },
+            ActionState::Cancelled => {
+                *state = ActionState::Failure;
+            }
+            _ => {}
+        }
+    },
     );
 }
 
@@ -199,83 +192,80 @@ pub fn deposit_ore_action_system(
     stations: Query<(Entity, &GalaxyCoordinate, &SimPosition, &OnboardInventory), With<AnchorableTag>>,
     mut action: Query<(&Actor, &DepositOre, &mut ActionState)>,
 ) {
-    action.par_for_each_mut(8, |(Actor(actor), order, mut state)|
-        {
-            let (id, coord, pos, inv_id, mut desto) = ships.get(*actor).unwrap();
-            match *state {
-                ActionState::Requested => {
-                    let closest =
-                        get_closest_station(coord, pos, &stations);
+    action.par_iter_mut().for_each_mut(|(Actor(actor), order, mut state)| {
+        let (id, coord, pos, inv_id, mut desto) = ships.get(*actor).unwrap();
+        match *state {
+            ActionState::Requested => {
+                let closest =
+                    get_closest_station(coord, pos, &stations);
 
-                    match closest.1 {
-                        None => { *state = ActionState::Failure }
-                        Some(_) => {
-                            par_commands.command_scope(|mut commands| {
-                                commands.entity(id)
-                                    .insert(Destination(DestoType::DPosition(closest.0)))
-                                ;
-                            });
-                            *state = ActionState::Executing;
-                        }
+                match closest.1 {
+                    None => { *state = ActionState::Failure }
+                    Some(_) => {
+                        par_commands.command_scope(|mut commands| {
+                            commands.entity(id)
+                                .insert(Destination(DestoType::DPosition(closest.0)))
+                            ;
+                        });
+                        *state = ActionState::Executing;
                     }
                 }
+            }
 
-                ActionState::Executing => {
-                    //println!("moving");
-                    match desto.0 {
-                        DestoType::DPosition(target_pos) => {
-                            if (pos.0.truncate() - target_pos.0.truncate()).length() < m_to_system(30.0) {
-                                let inv_ref = inventories.get(inv_id.0).unwrap();
-                                let item =
-                                    is_type_in_inventory(
-                                        &ItemType::ORE,
-                                        inv_ref,
-                                        &items,
-                                    );
+            ActionState::Executing => {
+                //println!("moving");
+                match desto.0 {
+                    DestoType::DPosition(target_pos) => {
+                        if (pos.0.truncate() - target_pos.0.truncate()).length() < m_to_system(30.0) {
+                            let inv_ref = inventories.get(inv_id.0).unwrap();
+                            let item =
+                                is_type_in_inventory(
+                                    &ItemType::ORE,
+                                    inv_ref,
+                                    &items,
+                                );
 
-                                match item {
-                                    None => {
-                                        *state = ActionState::Failure;
-                                    }
-                                    Some(item_id) => {
-                                        let closest =
-                                            get_closest_station(coord, pos, &stations);
+                            match item {
+                                None => {
+                                    *state = ActionState::Failure;
+                                }
+                                Some(item_id) => {
+                                    let closest =
+                                        get_closest_station(coord, pos, &stations);
 
-                                        match closest.1 {
-                                            None => {
-                                                *state = ActionState::Failure;
-                                            }
-                                            Some(closest_id) => {
-                                                let closest_inv = stations.get(closest_id).unwrap().3;
-                                                par_commands.command_scope(|mut commands| {
-                                                    commands.entity(item_id).insert(
-                                                        TransferItemOrder {
-                                                            from: inv_id.0,
-                                                            to: closest_inv.0,
-                                                        });
-                                                });
-                                                *state = ActionState::Success;
-                                            }
+                                    match closest.1 {
+                                        None => {
+                                            *state = ActionState::Failure;
+                                        }
+                                        Some(closest_id) => {
+                                            let closest_inv = stations.get(closest_id).unwrap().3;
+                                            par_commands.command_scope(|mut commands| {
+                                                commands.entity(item_id).insert(
+                                                    TransferItemOrder {
+                                                        from: inv_id.0,
+                                                        to: closest_inv.0,
+                                                    });
+                                            });
+                                            *state = ActionState::Success;
                                         }
                                     }
                                 }
                             }
                         }
-                        DestoType::TEntity(id) => {
-                            if (pos.0 - id.0).length() < m_to_system(30.0) {
-                                *state = ActionState::Success;
-                            }
-                        }
-                        DestoType::None => {}
                     }
+                    DestoType::TEntity(id) => {
+                        todo!();
+                    }
+                    DestoType::None => {}
                 }
-                ActionState::Success => {}
-                ActionState::Cancelled => {
-                    *state = ActionState::Failure;
-                }
-                _ => {}
             }
-        },
+            ActionState::Success => {}
+            ActionState::Cancelled => {
+                *state = ActionState::Failure;
+            }
+            _ => {}
+        }
+    },
     );
 }
 

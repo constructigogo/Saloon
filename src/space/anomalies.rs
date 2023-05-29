@@ -63,10 +63,14 @@ pub fn spawn_anom(at: SimPosition, galaxy: Entity) -> AnomalyBundle {
                     ..default()
                 },
                 transform: Transform {
-                    translation: Vec3::ZERO,
+                    translation: Vec3{
+                        x: 0.0,
+                        y: 0.0,
+                        z: -1.0
+                    },
                     ..default()
                 },
-                visibility: Visibility { is_visible: true },
+                visibility: Visibility::Visible,
                 ..default()
             },
             galaxy: GalaxyEntityBundle {
@@ -84,11 +88,13 @@ pub fn init_anom(
     mut anom: Query<(Entity,&GalaxyCoordinate, &SimPosition, &Anomaly, &mut AnomalyMining), With<AnomalyInit>>,
 ) {
     for (id,galaxy,pos,anom,mut mining) in anom.iter_mut() {
+        println!("init anom");
         for _ in 0..5*anom.level {
             let roid = command.spawn((
                 spawn_asteroid(pos.clone(), galaxy.0),
             )).id();
             mining.tracked.push(roid);
+            println!("spawn roid");
         }
         command.entity(id).remove::<AnomalyInit>();
         command.entity(id).insert(AnomalyActive);

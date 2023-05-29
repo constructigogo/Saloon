@@ -13,11 +13,8 @@ use space::galaxy::{GalaxyCoordinate, SolarSystem, SystemMap};
 use space::ship::pilot::*;
 use space::SpaceGamePlugins;
 
-use crate::AI::AIPlugins;
-use crate::AI::miner::{DepositOre, Mine, MineAnom, MoveToAnom};
-use crate::base::*;
 use crate::base::timer::*;
-use crate::DestoType::TEntity;
+use crate::base::*;
 use crate::map::{generate_map_pathfinding_system, line_debug};
 use crate::space::anomalies::*;
 use crate::space::asteroid::*;
@@ -27,20 +24,25 @@ use crate::space::project::project_to_camera;
 use crate::space::ship::*;
 use crate::space::station::*;
 use crate::space::weapon::*;
+use crate::AI::miner::{DepositOre, Mine, MineAnom, MoveToAnom};
+use crate::AI::AIPlugins;
+use crate::UI::UIPlugin;
 
+pub mod AI;
+pub mod UI;
 pub mod base;
 pub mod space;
-pub mod AI;
-
 
 fn main() {
     let mut app = App::new();
 
     app
         //.add_plugins(DefaultPlugins.build().disable::<LogPlugin>())
+        .insert_resource(FixedTime::new_from_secs(1.0))
         .add_plugins(DefaultPlugins)
         .add_plugin(DebugLinesPlugin::default())
         .add_plugin(BigBrainPlugin)
+        .add_plugin(UIPlugin)
         //.add_plugin(EditorPlugin)
         .add_plugins(DefaultPickingPlugins)
         //.add_plugin(DebugEventsPickingPlugin)
@@ -49,8 +51,7 @@ fn main() {
         .add_plugins(AIPlugins)
         .add_plugin(TimerPlugin)
         //.add_system(frame_update)
-        .add_system(line_debug.after(project_to_camera))
-    ;
+        .add_system(line_debug.after(project_to_camera));
     //.add_system(follow_mouse)
 
     //bevy_mod_debugdump::print_schedule(&mut app);
@@ -61,20 +62,6 @@ fn main() {
 #[derive(Component)]
 struct TestTag;
 
-
-fn follow_mouse(mut query: Query<&mut Transform>,
-                mut motion_evr: EventReader<MouseMotion>,
-                mouse_button_input: Res<Input<MouseButton>>) {
-    if mouse_button_input.pressed(MouseButton::Left) {
-        for mut transf in &mut query {
-            for ev in motion_evr.iter() {
-                transf.translation += Vec3::new(ev.delta.x, -ev.delta.y, 0.0);
-            }
-        }
-    }
-}
-
-
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -83,8 +70,8 @@ fn setup(
 ) {
     let mut rng = thread_rng();
     for i in 0..1 {
-        let id = commands.spawn(
-            (
+        let id = commands
+            .spawn((
                 SolarSystem {
                     anomalies: Vec::new(),
                     gates: HashMap::new(),
@@ -94,7 +81,7 @@ fn setup(
                     x: (-500.0 + (500.0 * i as f64)) * 0.00001,
                     y: 0.0,
                     z: 0.0,
-                }, ),
+                }),
                 MaterialMesh2dBundle {
                     mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
                     material: materials.add(ColorMaterial::from(Color::RED)),
@@ -104,14 +91,20 @@ fn setup(
                             y: 0.0,
                             z: 0.0,
                         },
-                        scale: Vec3 { x: 64.0, y: 64.0, z: 1.0 },
+                        scale: Vec3 {
+                            x: 64.0,
+                            y: 64.0,
+                            z: 1.0,
+                        },
                         ..default()
                     },
-                    visibility: Visibility { is_visible: true },
+                    visibility: Visibility::Visible,
                     ..default()
                 },
                 PickableBundle::default(),
-            )).remove::<Selection>().id();
+            ))
+            .remove::<Selection>()
+            .id();
 
         cluster.0.push(id);
 
@@ -136,67 +129,84 @@ fn setup(
 
         commands.spawn(spawn_inventory(mid));
          */
-        let far = commands.spawn((
-            spawn_station_at(SimPosition(DVec3 {
-                x: au_to_system(25.0),
-                y: 0.0,
-                z: 0.0,
-            }), id),
-            UndockLoc,
-        )).id();
+        let far = commands
+            .spawn((
+                spawn_station_at(
+                    SimPosition(DVec3 {
+                        x: au_to_system(25.0),
+                        y: 0.0,
+                        z: 0.0,
+                    }),
+                    id,
+                ),
+                UndockLoc,
+            ))
+            .id();
         commands.spawn(spawn_inventory(far));
 
+        let anom = commands
+            .spawn((
+                spawn_anom(
+                    SimPosition(DVec3 {
+                        x: m_to_system(400.0),
+                        y: m_to_system(400.0),
+                        z: 0.0,
+                    }),
+                    id,
+                ),
+                AnomalyMining {
+                    tracked: Vec::new(),
+                },
+                RegisterTo(id),
+            ))
+            .id();
 
-        let anom = commands.spawn((
-            spawn_anom(SimPosition(DVec3 {
-                x: m_to_system(400.0),
-                y: m_to_system(400.0),
-                z: 0.0,
-            }), id),
-            AnomalyMining { tracked: Vec::new() },
-            RegisterTo(id),
-        )).id();
+        let anom2 = commands
+            .spawn((
+                spawn_anom(
+                    SimPosition(DVec3 {
+                        x: m_to_system(-400.0),
+                        y: m_to_system(-400.0),
+                        z: 0.0,
+                    }),
+                    id,
+                ),
+                AnomalyMining {
+                    tracked: Vec::new(),
+                },
+                RegisterTo(id),
+            ))
+            .id();
 
-        let anom2 = commands.spawn((
-            spawn_anom(SimPosition(DVec3 {
-                x: m_to_system(-400.0),
-                y: m_to_system(-400.0),
-                z: 0.0,
-            }), id),
-            AnomalyMining { tracked: Vec::new() },
-            RegisterTo(id),
-        )).id();
+        let anom_inv = commands
+            .spawn((
+                Inventory {
+                    owner: anom,
+                    location: anom,
+                    container: Vec::new(),
+                    max_volume: None,
+                    cached_current_volume: 0.0,
+                },
+                UpdateCachedVolume,
+            ))
+            .id();
 
-        let anom_inv = commands.spawn((
-            Inventory {
-                owner: anom,
-                location: anom,
-                container: Vec::new(),
-                max_volume: None,
-                cached_current_volume: 0.0,
-            },
-            UpdateCachedVolume
-        )).id();
-
-
-        let first = commands.spawn((
-            spawn_new_pilot(),
-            UndockingFrom(far),
-        )).id();
+        let first = commands.spawn((spawn_new_pilot(), UndockingFrom(far))).id();
 
         let mut vec_inv: Vec<Entity> = Vec::new();
 
-        let first_inv = commands.spawn((
-            Inventory {
-                owner: first,
-                location: first,
-                container: vec_inv,
-                max_volume: Some(15.0),
-                cached_current_volume: 0.0,
-            },
-            UpdateCachedVolume
-        )).id();
-
+        let first_inv = commands
+            .spawn((
+                Inventory {
+                    owner: first,
+                    location: first,
+                    container: vec_inv,
+                    max_volume: Some(15.0),
+                    cached_current_volume: 0.0,
+                },
+                UpdateCachedVolume,
+            ))
+            .id();
 
         for _ in 0..1 {
             let mine_in_anom = Steps::build()
@@ -205,47 +215,45 @@ fn setup(
                 .step(MineAnom)
                 .step(DepositOre);
 
-
-            let ship = commands.spawn((
-                spawn_new_pilot(),
-                UndockingFrom(far),
-                Thinker::build()
-                    .label("mine")
-                    .picker(FirstToScore { threshold: 0.8 })
-                    .when(
-                        Mine,
-                        mine_in_anom,
-                    ),
-                WeaponBundle {
-                    _weapon: Weapon {
-                        _type: WeaponType::Mining,
-                        config: WeaponConfig::RangeShort,
-                        size: WeaponSize::Small,
-                        tier: 1,
-                        bank: 1,
+            let ship = commands
+                .spawn((
+                    spawn_new_pilot(),
+                    UndockingFrom(far),
+                    Thinker::build()
+                        .label("mine")
+                        .picker(FirstToScore { threshold: 0.8 })
+                        .when(Mine, mine_in_anom),
+                    WeaponBundle {
+                        _weapon: Weapon {
+                            _type: WeaponType::Mining,
+                            config: WeaponConfig::RangeShort,
+                            size: WeaponSize::Small,
+                            tier: 1,
+                            bank: 1,
+                        },
+                        target: WeaponTarget(None),
+                        in_range: WeaponInRange(false),
                     },
-                    target: WeaponTarget(None),
-                    in_range: WeaponInRange(false),
-                }
-            )).id();
+                ))
+                .id();
 
-            let inv = commands.spawn((
-                Inventory {
-                    owner: ship,
-                    location: ship,
-                    container: Vec::new(),
-                    max_volume: Some(253.6577),
-                    cached_current_volume: 0.0,
-                },
-                UpdateCachedVolume,
-                RegisterInventoryTo(ship)
-            )).id();
+            let inv = commands
+                .spawn((
+                    Inventory {
+                        owner: ship,
+                        location: ship,
+                        container: Vec::new(),
+                        max_volume: Some(253.6577),
+                        cached_current_volume: 0.0,
+                    },
+                    UpdateCachedVolume,
+                    RegisterInventoryTo(ship),
+                ))
+                .id();
         }
     }
 
-
-
-    /* 
+    /*
     // Cube
     commands.spawn((SpriteBundle {
         sprite: Sprite {
@@ -259,7 +267,7 @@ fn setup(
 
     ));
     */
-    /* 
+    /*
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -279,7 +287,7 @@ fn setup(
         },
         TestTag,
     ));
-    
+
     for _ in 0..1 {
         commands.spawn((
             spawn_new_pilot(),
@@ -288,30 +296,4 @@ fn setup(
         );
     }
     */
-}
-
-
-fn test_move(
-    mut query_ships: Query<&mut Destination, Without<TestTag>>,
-    query_targets: Query<&SimPosition, With<TestTag>>) {
-    let mut t: Option<&SimPosition> = None;
-    let mut min_dist: f64 = f64::MAX;
-    for tr in query_targets.iter() {
-        let dist = tr.0.length_squared();
-        if dist < min_dist {
-            min_dist = dist;
-            t = Some(tr)
-        }
-    }
-
-    //println!("{:?}",t);
-
-    for mut dest in &mut query_ships {
-        match t {
-            Some(tr) => {
-                dest.0 = TEntity(*tr);
-            }
-            None => {}
-        }
-    }
 }

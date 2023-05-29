@@ -1,6 +1,6 @@
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::*;
-use big_brain::BigBrainStage;
+use big_brain::BigBrainSet;
 
 use crate::AI::miner::*;
 
@@ -22,10 +22,10 @@ pub struct MinerAIPlugin;
 impl Plugin for MinerAIPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_system_to_stage(BigBrainStage::Actions, move_to_anom_system)
-            .add_system_to_stage(BigBrainStage::Actions, mine_anom_system)
-            .add_system_to_stage(BigBrainStage::Actions, deposit_ore_action_system)
-            .add_system_to_stage(BigBrainStage::Scorers, mine_scorer_system)
+            .add_system(move_to_anom_system.in_set(BigBrainSet::Actions))
+            .add_system(mine_anom_system.in_set(BigBrainSet::Actions))
+            .add_system(deposit_ore_action_system.in_set(BigBrainSet::Actions))
+            .add_system(mine_scorer_system.in_set(BigBrainSet::Scorers))
         ;
     }
 }

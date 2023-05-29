@@ -1,7 +1,7 @@
 use std::cmp::max;
 
-use bevy::{ecs::component, prelude::*, transform::components};
 use bevy::math::{DVec2, DVec3, Vec3Swizzles};
+use bevy::{ecs::component, prelude::*, transform::components};
 use rand::prelude::*;
 
 use crate::base::velocity::*;
@@ -18,71 +18,98 @@ pub mod velocity;
 pub mod pilot;
 pub mod warp;
 
-
 ///TODO should schedule only a few times per frame
 pub fn compute_ship_forces(
     time: Res<Time>,
-    mut query: Query<(&mut Velocity, &SimPosition, &Destination, &Mass, &ThrusterEngine), Without<Warping>>) {
-    query.par_for_each_mut(8, |(mut vel, sPos, dest, mass, thruster)|
-        {
-            let desto_type: &DestoType = &dest.0;
-            let direction: Option<DVec2> = DVec2 { x: vel.x, y: vel.y }.try_normalize();
-            let amplitude: f64 = vel.length();
-            let accel: f64 = get_accel(mass, thruster);
-            let drag: DVec2;
+    query_any_pos: Query<(&GalaxyCoordinate, &SimPosition)>,
+    mut query: Query<
+        (
+            &mut Velocity,
+            &GalaxyCoordinate,
+            &SimPosition,
+            &Destination,
+            &Mass,
+            &ThrusterEngine,
+        ),
+        Without<Warping>,
+    >,
+) {
+    query.par_iter_mut().for_each_mut(|(mut vel, coord, sPos, dest, mass, thruster)| {
+        let desto_type: &DestoType = &dest.0;
+        let direction: Option<DVec2> = DVec2 { x: vel.x, y: vel.y }.try_normalize();
+        let amplitude: f64 = vel.length();
+        let accel: f64 = get_accel(mass, thruster);
+        let drag: DVec2;
 
-            match direction {
-                None => { drag = DVec2::ZERO }
-                Some(dir) => {
-                    drag = -dir * (0.02 * 0.35 * ((amplitude * amplitude)));
-                }
+        match direction {
+            None => drag = DVec2::ZERO,
+            Some(dir) => {
+                drag = -dir * (0.02 * 0.35 * (amplitude * amplitude));
             }
+        }
 
-            let mut thrust_dir: Option<DVec2> = None;
-            let dist: f64;
+        let mut thrust_dir: Option<DVec2>;
+        let dist: f64;
 
-            match desto_type {
-                DestoType::DPosition(dPos) => {
-                    //println!("desto : {:?}",dPos);
-
-                    dist = (dPos.0.truncate() - sPos.0.truncate()).length() / 0.000001;
-                    thrust_dir = Some((dPos.0.truncate() - sPos.0.truncate()).normalize());
-                }
-                DestoType::TEntity(dPos) => {
-                    //println!("desto : {:?}",dPos.0.truncate());
-
-                    dist = (dPos.0.truncate() - sPos.0.truncate()).length() / 0.000001;
-                    thrust_dir = Some((dPos.0.truncate() - sPos.0.truncate()).normalize());
-                }
-                DestoType::None => {
-                    dist = 0.0;
-                }
+        match desto_type {
+            DestoType::DPosition(d_pos) => {
+                dist = (d_pos.0.truncate() - sPos.0.truncate()).length() / 0.000001;
+                thrust_dir = Some((d_pos.0.truncate() - sPos.0.truncate()).normalize());
             }
-
-
-            match thrust_dir {
-                None => {
-                    let local_vel = vel.0;
-                    vel.0 += (drag - local_vel.normalize() * accel) * time.delta_seconds_f64()
-                }
-                Some(dir) => {
-                    let local_vel: DVec2 = vel.0;
-                    let brake = dist / accel < local_vel.length() / accel;
-
-                    if brake {
-                        vel.0 += (drag - local_vel.normalize() * accel) * time.delta_seconds_f64()
-                    } else {
-                        vel.0 += ((drag +
-                            dir * accel
-                        )) * time.delta_seconds_f64();
+            DestoType::TEntity(t_id) => {
+                let t_res = query_any_pos.get(*t_id);
+                match t_res {
+                    Err(_) => {
+                        dist = 0.0;
+                        thrust_dir = None;
                     }
-                    //println!("vel  = {:?}, accel = {:?}, drag = {:?}, dist = {:?}, value = {:?}", amplitude, accel, drag.length(),dist, 0.0);
+                    Ok((t_coord, t_pos)) => {
+                        if coord.0 == t_coord.0 {
+                            dist = (t_pos.0.truncate() - sPos.0.truncate()).length() / 0.000001;
+                            thrust_dir = Some((t_pos.0.truncate() - sPos.0.truncate()).normalize());
+                        } else {
+                            dist = 0.0;
+                            thrust_dir = None;
+                        }
+                    }
                 }
+                todo!();
+                //dist = (dPos.0.truncate() - sPos.0.truncate()).length() / 0.000001;
+                //thrust_dir = Some((dPos.0.truncate() - sPos.0.truncate()).normalize());
             }
-        });
+            DestoType::None => {
+                dist = 0.0;
+                thrust_dir = None;
+            }
+        }
+
+        match thrust_dir {
+            None => {
+                let local_vel = vel.0;
+                vel.0 += (drag - local_vel.normalize() * accel) * time.delta_seconds_f64()
+            }
+            Some(dir) => {
+                let local_vel: DVec2 = vel.0;
+                let brake = dist / accel < local_vel.length() / accel;
+
+                if brake {
+                    vel.0 += (drag - local_vel.normalize() * accel) * time.delta_seconds_f64()
+                } else {
+                    vel.0 += (drag + dir * accel) * time.delta_seconds_f64();
+                }
+                //println!("vel  = {:?}, accel = {:?}, drag = {:?}, dist = {:?}, value = {:?}", amplitude, accel, drag.length(),dist, 0.0);
+            }
+        }
+    });
 }
 
-fn get_delta_velocity(from: &DVec2, to: &DVec2, m: &Mass, th: &ThrusterEngine, dt: f64) -> Option<DVec2> {
+fn get_delta_velocity(
+    from: &DVec2,
+    to: &DVec2,
+    m: &Mass,
+    th: &ThrusterEngine,
+    dt: f64,
+) -> Option<DVec2> {
     let dir = (*from - *to).try_normalize();
     match dir {
         Some(d) => {
@@ -103,16 +130,17 @@ fn get_accel(m: &Mass, th: &ThrusterEngine) -> f64 {
 #[component(storage = "SparseSet")]
 pub struct UndockLoc;
 
-
 pub fn undock_pilot_system(
     mut commands: Commands,
     query: Query<(Entity, &UndockingFrom)>,
-    undocks: Query<(&SimPosition, &GalaxyCoordinate), With<UndockLoc>>) {
+    undocks: Query<(&SimPosition, &GalaxyCoordinate), With<UndockLoc>>,
+) {
     let mut rng = thread_rng();
     for (entity, from) in query.iter() {
         if let Ok(trans) = undocks.get(commands.entity(from.0).id()) {
-            commands.entity(entity).insert(
-                ShipBundle {
+            commands
+                .entity(entity)
+                .insert(ShipBundle {
                     display: SpriteBundle {
                         sprite: Sprite {
                             color: Color::rgb(0.25, 0.25, 0.75),
@@ -123,12 +151,12 @@ pub fn undock_pilot_system(
                             translation: Vec3::ZERO,
                             ..default()
                         },
-                        visibility: Visibility { is_visible: true },
+                        visibility: Visibility::Visible,
                         ..default()
                     },
                     movable: MovableBundle {
-                        coordinate: GalaxyCoordinate(trans.1.0),
-                        simulation_position: SimPosition(trans.0.0),
+                        coordinate: GalaxyCoordinate(trans.1 .0),
+                        simulation_position: SimPosition(trans.0 .0),
                         mass: Mass(1500000),
                         velocity: Velocity::default(),
                         thruster: ThrusterEngine {
@@ -136,20 +164,19 @@ pub fn undock_pilot_system(
                             thrust: 100000000,
                             angular: 25.15,
                         },
-                        move_towards:
-                        Destination(DestoType::DPosition(SimPosition(DVec3 {
+                        move_towards: Destination(DestoType::DPosition(SimPosition(DVec3 {
                             x: rng.gen_range(-0.0002..0.0002),
                             y: rng.gen_range(-0.00015..0.00015),
                             z: 0.0,
-                        })))
-                        ,
+                        }))),
                     },
-                }
-            ).remove::<UndockingFrom>();
-        } else { println!("invalid pos") }
+                })
+                .remove::<UndockingFrom>();
+        } else {
+            panic!("invalid undock pos")
+        }
     }
 }
-
 
 ///Flag to schedule a ship undock during the next frame
 #[derive(Component)]
@@ -173,7 +200,6 @@ pub(crate) struct MovableBundle {
     pub move_towards: Destination,
 }
 
-
 #[derive(Bundle)]
 pub struct ShipStatsBundle {
     health_comp: Health,
@@ -184,11 +210,9 @@ pub struct DamageableBundle {
     health: Health,
 }
 
-
 /// Mass in Kg of an entity
 #[derive(Component, Deref, DerefMut)]
 pub struct Mass(u64);
-
 
 #[derive(Component)]
 pub struct ThrusterEngine {
@@ -207,7 +231,6 @@ pub struct WarpEngine {
     power: f64,
 }
 
-
 #[derive(Component)]
 pub struct Health {
     current_structure: f32,
@@ -221,12 +244,10 @@ pub struct Health {
 #[derive(Default)]
 pub enum DestoType {
     DPosition(SimPosition),
-    TEntity(SimPosition),
+    TEntity(Entity),
     #[default]
     None,
 }
 
-
 #[derive(Component, Deref, DerefMut)]
 pub struct Destination(pub DestoType);
-

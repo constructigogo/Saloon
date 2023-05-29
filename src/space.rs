@@ -1,7 +1,7 @@
 use bevy::app::{App, PluginGroupBuilder};
 use bevy::prelude::*;
 use bevy::prelude::system_adapter::new;
-use bevy::time::FixedTimestep;
+use bevy::time::common_conditions::on_fixed_timer;
 use bevy::utils::tracing::callsite::register;
 
 use crate::{generate_map_pathfinding_system, HashMap, transfer_item};
@@ -64,7 +64,9 @@ impl Plugin for GalaxyPlugin {
             .add_system(travel_route_system)
             .add_system(continue_route_system)
             .add_system(take_gate_added_system)
-            .add_system(take_gate_system.with_run_criteria(FixedTimestep::step(1.0)))
+            .add_system(take_gate_system.in_schedule(CoreSchedule::FixedUpdate))
+
+            //.add_system(take_gate_system.with_run_criteria(FixedTimestep::step(1.0)))
             .add_startup_system(generate_map_pathfinding_system)
             .add_startup_system(test_map_setup_fill.after(generate_map_pathfinding_system));
     }

@@ -43,7 +43,7 @@ pub fn spawn_asteroid(at: SimPosition, galaxy: Entity) -> AsteroidBundle {
                     translation: Vec3::ZERO,
                     ..default()
                 },
-                visibility: Visibility { is_visible: false },
+                visibility: Visibility::Visible,
                 ..default()
             },
             galaxy: GalaxyEntityBundle {

@@ -11,7 +11,6 @@ impl Plugin for GameSettingsPlugin {
     }
 }
 
-
 #[derive(Resource)]
 pub struct GameplaySettings {
     pub camera_keyboard_sensitivity: f32,

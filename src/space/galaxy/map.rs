@@ -8,7 +8,7 @@ use bevy_mod_picking::{PickableBundle, Selection};
 use bevy_prototype_debug_lines::DebugLines;
 use big_brain::prelude::*;
 
-use crate::{AnomalyMining, around_pos, au_to_system, DepositOre, Destination, DestoType, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, m_to_system, MaterialMesh2dBundle, Mine, MineAnom, MoveToAnom, RegisterTo, SimPosition, SolarSystem, spawn_anom, spawn_inventory, spawn_station_at, SystemMap, UndockingFrom, UndockLoc, Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
+use crate::{AnomalyMining, around_pos, au_to_system, DepositOre, Destination, DestoType, DisplayableGalaxyEntityBundle, DVec3, GalaxyCoordinate, GalaxyEntityBundle, GalaxyGateTag, GalaxySpawnGateBundle, GateDestination, Inventory, m_to_system, MaterialMesh2dBundle, Mine, MineAnom, MoveToAnom, RegisterInventoryTo, RegisterTo, SimPosition, SolarSystem, spawn_anom, spawn_inventory, spawn_station_at, SystemMap, UndockingFrom, UndockLoc, UpdateCachedVolume, Weapon, WeaponBundle, WeaponConfig, WeaponInRange, WeaponSize, WeaponTarget, WeaponType};
 use crate::AI::utils::{get_system_in_range, spawn_mining_anom, spawn_station};
 use crate::gates::init_make_portal;
 use crate::space::pilot::spawn_new_pilot;
@@ -64,7 +64,7 @@ pub fn generate_map_pathfinding_system(
                         scale: Vec3 { x: 64.0, y: 64.0, z: 1.0 },
                         ..default()
                     },
-                    visibility: Visibility { is_visible: true },
+                    visibility: Visibility::Visible,
                     ..default()
                 },
                 PickableBundle::default(),
@@ -130,7 +130,11 @@ pub fn test_map_setup_fill(
     let center = spawn_station(
         &mut commands,
         GalaxyCoordinate(list[0]),
-        SimPosition(DVec3::ZERO),
+        SimPosition(DVec3 {
+            x: 0.0,
+            y: m_to_system(100.0),
+            z: 0.0,
+        }),
     );
 
     let anom = spawn_mining_anom(
@@ -143,17 +147,24 @@ pub fn test_map_setup_fill(
         }),
     );
 
-    let mine_in_anom = Steps::build()
-        .label("MineInAnom")
-        .step(MoveToAnom)
-        .step(MineAnom)
-        .step(DepositOre);
 
 
-    for _ in 0..100 {
+    for _ in 0..1 {
+        let mine_in_anom = Steps::build()
+            .label("MineInAnom")
+            .step(MoveToAnom)
+            .step(MineAnom)
+            .step(DepositOre);
         let ship = commands.spawn((
             spawn_new_pilot(),
             UndockingFrom(center),
+            Thinker::build()
+                .label("mine")
+                .picker(FirstToScore { threshold: 0.8 })
+                .when(
+                    Mine,
+                    mine_in_anom,
+                ),
             WeaponBundle {
                 _weapon: Weapon {
                     _type: WeaponType::Mining,
@@ -165,7 +176,19 @@ pub fn test_map_setup_fill(
                 target: WeaponTarget(None),
                 in_range: WeaponInRange(false),
             },
-            TravelTo(list[4])
+            //TravelTo(list[4])
+        )).id();
+
+        let inv = commands.spawn((
+            Inventory {
+                owner: ship,
+                location: ship,
+                container: Vec::new(),
+                max_volume: Some(253.6577),
+                cached_current_volume: 0.0,
+            },
+            UpdateCachedVolume,
+            RegisterInventoryTo(ship)
         )).id();
     }
 
